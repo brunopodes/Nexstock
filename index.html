@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexstock</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Fallback: si Google Fonts no carga, usar fuentes del sistema */
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3a;
+    --accent: #00e5a0;
+    --accent2: #7b61ff;
+    --warn: #ff6b35;
+    --text: #e8e8f0;
+    --muted: #6b6b88;
+    --success: #00e5a0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+
+  nav {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Syne', 'Segoe UI', Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  nav button:hover { color: var(--text); background: var(--surface2); }
+  nav button.active { color: var(--accent); background: rgba(0,229,160,0.08); }
+
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  /* MAIN */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* VIEWS */
+  .view { display: none; animation: fadeIn 0.3s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* DASHBOARD */
+  .page-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.25rem;
+  }
+  .page-subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; font-family: 'DM Mono', 'Courier New', monospace; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 80px; height: 80px;
+    background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    font-family: 'DM Mono', 'Courier New', monospace;
+  }
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.warn { color: var(--warn); }
+  .stat-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; font-family: 'DM Mono', 'Courier New', monospace; }
+
+  /* PRODUCT TABLE */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th {
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', 'Courier New', monospace;
+    white-space: nowrap;
+  }
+  td {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    border-top: 1px solid var(--border);
+    font-family: 'DM Mono', 'Courier New', monospace;
+  }
+  tr:hover td { background: var(--surface2); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .badge-ok { background: rgba(0,229,160,0.1); color: var(--accent); }
+  .badge-warn { background: rgba(255,107,53,0.1); color: var(--warn); }
+  .badge-mid { background: rgba(123,97,255,0.1); color: var(--accent2); }
+
+  .margin-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .bar-bg {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.5s ease;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    font-family: 'Syne', 'Segoe UI', Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost { background: none; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-danger { background: rgba(255,107,53,0.1); color: var(--warn); border: 1px solid rgba(255,107,53,0.2); }
+  .btn-danger:hover { background: rgba(255,107,53,0.2); }
+  .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.78rem; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalIn 0.25s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+  .modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', 'Courier New', monospace;
+  }
+
+  input, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    color: var(--text);
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+
+  .pricing-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  .pricing-preview-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    font-family: 'DM Mono', 'Courier New', monospace;
+  }
+  .pricing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+    font-size: 0.82rem;
+    font-family: 'DM Mono', 'Courier New', monospace;
+  }
+  .pricing-row.total {
+    border-top: 1px solid var(--border);
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .pricing-row span:first-child { color: var(--muted); }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  /* IMPORT SECTION */
+  .import-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+  }
+  .import-zone:hover { border-color: var(--accent); background: rgba(0,229,160,0.03); }
+  .import-zone-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .import-zone-text { color: var(--muted); font-size: 0.9rem; }
+  .import-zone-text strong { color: var(--text); display: block; margin-bottom: 0.25rem; font-size: 1rem; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .empty-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+  .empty-sub { font-size: 0.85rem; margin-bottom: 1.5rem; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.875rem;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    color: var(--accent);
+    z-index: 999;
+    animation: toastIn 0.3s ease;
+    display: none;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ACTION ICONS */
+  .actions-cell { display: flex; gap: 0.4rem; }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-btn.del:hover { border-color: var(--warn); color: var(--warn); }
+
+  .product-name { font-weight: 600; color: var(--text); font-family: 'Syne', sans-serif; font-size: 0.85rem; }
+  .product-sku { color: var(--muted); font-size: 0.75rem; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+
+  .highlight { color: var(--accent); }
+
+  @media (max-width: 768px) {
+    main { padding: 1rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    nav button span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Nex<span>stock</span></div>
+  <nav>
+    <button class="active" onclick="showView('dashboard')">📊 <span>Dashboard</span></button>
+    <button onclick="showView('products')">📦 <span>Productos</span></button>
+    <button onclick="showView('import')">📥 <span>Importar</span></button>
+  </nav>
+  <div class="header-actions">
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Producto</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- DASHBOARD VIEW -->
+  <div class="view active" id="view-dashboard">
+    <div class="page-title">Dashboard</div>
+    <div class="page-subtitle" id="dash-date"></div>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Productos</div>
+        <div class="stat-value accent" id="stat-total">0</div>
+        <div class="stat-sub">SKUs activos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stock Total</div>
+        <div class="stat-value" id="stat-stock">0</div>
+        <div class="stat-sub">unidades en inventario</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stock Disponible</div>
+        <div class="stat-value accent" id="stat-available">0</div>
+        <div class="stat-sub">unidades para venta</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stock Crítico</div>
+        <div class="stat-value warn" id="stat-critical">0</div>
+        <div class="stat-sub">productos bajo mínimo</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Margen Prom.</div>
+        <div class="stat-value accent" id="stat-margin">0%</div>
+        <div class="stat-sub">margen bruto promedio</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Valor Inventario</div>
+        <div class="stat-value" id="stat-value">$0</div>
+        <div class="stat-sub">a precio de costo</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Resumen de productos</div>
+    </div>
+    <div class="table-wrap" id="dashboard-table-wrap">
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">Sin productos aún</div>
+        <div class="empty-sub">Agregá tu primer producto para ver el dashboard</div>
+        <button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCTS VIEW -->
+  <div class="view" id="view-products">
+    <div class="page-title">Productos</div>
+    <div class="page-subtitle">Gestioná tu catálogo y precios</div>
+
+    <div class="section-header">
+      <div></div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-secondary btn-sm" onclick="exportExcel()">↓ Exportar Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal()">+ Nuevo producto</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="products-table-wrap">
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">Sin productos</div>
+        <div class="empty-sub">Agregá productos o importá desde Excel</div>
+        <button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORT VIEW -->
+  <div class="view" id="view-import">
+    <div class="page-title">Importar datos</div>
+    <div class="page-subtitle">Cargá tu inventario desde Excel</div>
+
+    <div class="import-zone" onclick="document.getElementById('file-input').click()">
+      <div class="import-zone-icon">📂</div>
+      <div class="import-zone-text">
+        <strong>Arrastrá tu archivo Excel aquí</strong>
+        o hacé click para seleccionarlo (.xlsx, .xls, .csv)
+      </div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileImport(event)">
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;">
+      <div class="section-title" style="margin-bottom:1rem;">Formato esperado del Excel</div>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;font-family:'DM Mono',monospace;">
+        Tu archivo debe tener estas columnas (el orden no importa):
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Columna</th>
+              <th>Ejemplo</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>nombre</td><td>Auricular BT500</td><td>Nombre del producto</td></tr>
+            <tr><td>sku</td><td>MOT-BT500</td><td>Código único</td></tr>
+            <tr><td>categoria</td><td>Auriculares</td><td>Categoría del producto</td></tr>
+            <tr><td>costo</td><td>5000</td><td>Costo en moneda local</td></tr>
+            <tr><td>stock_total</td><td>100</td><td>Stock total en depósito</td></tr>
+            <tr><td>stock_disponible</td><td>80</td><td>Stock disponible para venta</td></tr>
+            <tr><td>stock_minimo</td><td>10</td><td>Alerta de stock crítico</td></tr>
+            <tr><td>tasa_interes</td><td>5</td><td>% tasa financiera</td></tr>
+            <tr><td>comision_canal</td><td>12</td><td>% comisión del canal (ML, etc)</td></tr>
+            <tr><td>comision_cuotas</td><td>8</td><td>% costo de cuotas</td></tr>
+            <tr><td>impuestos</td><td>21</td><td>% impuestos (IVA, etc)</td></tr>
+            <tr><td>margen_objetivo</td><td>30</td><td>% margen bruto objetivo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:1rem;">
+        <button class="btn btn-secondary btn-sm" onclick="downloadTemplate()">↓ Descargar plantilla</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Nuevo producto</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nombre del producto</label>
+        <input type="text" id="f-nombre" placeholder="Ej: Auricular Motorola BT500" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>SKU / Código</label>
+        <input type="text" id="f-sku" placeholder="MOT-BT500">
+      </div>
+      <div class="form-group">
+        <label>Categoría</label>
+        <select id="f-categoria" onchange="updatePreview()">
+          <option value="Auriculares">Auriculares</option>
+          <option value="Cargadores">Cargadores</option>
+          <option value="Parlantes">Parlantes</option>
+          <option value="Tags">Tags</option>
+          <option value="Accesorios">Accesorios</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Costo ($)</label>
+        <input type="number" id="f-costo" placeholder="5000" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Margen objetivo (%)</label>
+        <input type="number" id="f-margen" placeholder="30" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Tasa de interés (%)</label>
+        <input type="number" id="f-interes" placeholder="5" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Comisión canal (%)</label>
+        <input type="number" id="f-comision-canal" placeholder="12" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Comisión cuotas (%)</label>
+        <input type="number" id="f-comision-cuotas" placeholder="8" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Impuestos (%)</label>
+        <input type="number" id="f-impuestos" placeholder="21" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Stock total</label>
+        <input type="number" id="f-stock-total" placeholder="100">
+      </div>
+      <div class="form-group">
+        <label>Stock disponible</label>
+        <input type="number" id="f-stock-disp" placeholder="80">
+      </div>
+      <div class="form-group">
+        <label>Stock mínimo (alerta)</label>
+        <input type="number" id="f-stock-min" placeholder="10">
+      </div>
+    </div>
+
+    <div class="pricing-preview" id="pricing-preview">
+      <div class="pricing-preview-title">Vista previa de pricing</div>
+      <div class="pricing-row"><span>Costo base</span><span id="prev-costo">$0</span></div>
+      <div class="pricing-row"><span>+ Tasa interés</span><span id="prev-interes">$0</span></div>
+      <div class="pricing-row"><span>+ Comisión canal</span><span id="prev-canal">$0</span></div>
+      <div class="pricing-row"><span>+ Comisión cuotas</span><span id="prev-cuotas">$0</span></div>
+      <div class="pricing-row"><span>+ Impuestos</span><span id="prev-impuestos">$0</span></div>
+      <div class="pricing-row"><span>+ Margen objetivo</span><span id="prev-margen">$0</span></div>
+      <div class="pricing-row total"><span>Precio de venta sugerido</span><span id="prev-total">$0</span></div>
+      <div class="pricing-row"><span>Margen bruto real</span><span id="prev-mb" style="color:var(--accent)">0%</span></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Guardar producto</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let products = JSON.parse(localStorage.getItem('nexstock_products') || '[]');
+let editingId = null;
+
+// Init
+document.getElementById('dash-date').textContent = new Date().toLocaleDateString('es-AR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'products') renderProducts();
+}
+
+function fmt(n) {
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+function calcPrice(p) {
+  const costo = parseFloat(p.costo) || 0;
+  const interes = parseFloat(p.tasa_interes) || 0;
+  const canal = parseFloat(p.comision_canal) || 0;
+  const cuotas = parseFloat(p.comision_cuotas) || 0;
+  const imp = parseFloat(p.impuestos) || 0;
+  const margen = parseFloat(p.margen_objetivo) || 0;
+
+  const totalPct = interes + canal + cuotas + imp + margen;
+  const precio = costo / (1 - totalPct / 100);
+  const mb = ((precio - costo) / precio) * 100;
+
+  return {
+    costo,
+    interes_monto: costo * interes / 100,
+    canal_monto: precio * canal / 100,
+    cuotas_monto: precio * cuotas / 100,
+    imp_monto: precio * imp / 100,
+    margen_monto: precio * margen / 100,
+    precio: precio,
+    mb: mb
+  };
+}
+
+function updatePreview() {
+  const p = {
+    costo: document.getElementById('f-costo').value,
+    tasa_interes: document.getElementById('f-interes').value,
+    comision_canal: document.getElementById('f-comision-canal').value,
+    comision_cuotas: document.getElementById('f-comision-cuotas').value,
+    impuestos: document.getElementById('f-impuestos').value,
+    margen_objetivo: document.getElementById('f-margen').value,
+  };
+  const c = calcPrice(p);
+  document.getElementById('prev-costo').textContent = fmt(c.costo);
+  document.getElementById('prev-interes').textContent = fmt(c.interes_monto);
+  document.getElementById('prev-canal').textContent = fmt(c.canal_monto);
+  document.getElementById('prev-cuotas').textContent = fmt(c.cuotas_monto);
+  document.getElementById('prev-impuestos').textContent = fmt(c.imp_monto);
+  document.getElementById('prev-margen').textContent = fmt(c.margen_monto);
+  document.getElementById('prev-total').textContent = fmt(c.precio);
+  document.getElementById('prev-mb').textContent = c.mb.toFixed(1) + '%';
+}
+
+function openModal(id = null) {
+  editingId = id;
+  document.getElementById('modal-title').textContent = id ? 'Editar producto' : 'Nuevo producto';
+  const fields = ['nombre','sku','categoria','costo','margen','interes','comision-canal','comision-cuotas','impuestos','stock-total','stock-disp','stock-min'];
+
+  if (id) {
+    const p = products.find(x => x.id === id);
+    document.getElementById('f-nombre').value = p.nombre || '';
+    document.getElementById('f-sku').value = p.sku || '';
+    document.getElementById('f-categoria').value = p.categoria || 'Accesorios';
+    document.getElementById('f-costo').value = p.costo || '';
+    document.getElementById('f-margen').value = p.margen_objetivo || '';
+    document.getElementById('f-interes').value = p.tasa_interes || '';
+    document.getElementById('f-comision-canal').value = p.comision_canal || '';
+    document.getElementById('f-comision-cuotas').value = p.comision_cuotas || '';
+    document.getElementById('f-impuestos').value = p.impuestos || '';
+    document.getElementById('f-stock-total').value = p.stock_total || '';
+    document.getElementById('f-stock-disp').value = p.stock_disponible || '';
+    document.getElementById('f-stock-min').value = p.stock_minimo || '';
+  } else {
+    fields.forEach(f => { try { document.getElementById('f-'+f).value = ''; } catch(e){} });
+  }
+
+  updatePreview();
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editingId = null;
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+function saveProduct() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio'); return; }
+
+  const product = {
+    id: editingId || Date.now().toString(),
+    nombre,
+    sku: document.getElementById('f-sku').value.trim(),
+    categoria: document.getElementById('f-categoria').value,
+    costo: parseFloat(document.getElementById('f-costo').value) || 0,
+    margen_objetivo: parseFloat(document.getElementById('f-margen').value) || 0,
+    tasa_interes: parseFloat(document.getElementById('f-interes').value) || 0,
+    comision_canal: parseFloat(document.getElementById('f-comision-canal').value) || 0,
+    comision_cuotas: parseFloat(document.getElementById('f-comision-cuotas').value) || 0,
+    impuestos: parseFloat(document.getElementById('f-impuestos').value) || 0,
+    stock_total: parseInt(document.getElementById('f-stock-total').value) || 0,
+    stock_disponible: parseInt(document.getElementById('f-stock-disp').value) || 0,
+    stock_minimo: parseInt(document.getElementById('f-stock-min').value) || 0,
+    created: new Date().toISOString(),
+  };
+
+  if (editingId) {
+    const idx = products.findIndex(x => x.id === editingId);
+    products[idx] = product;
+    showToast('Producto actualizado ✓');
+  } else {
+    products.push(product);
+    showToast('Producto agregado ✓');
+  }
+
+  localStorage.setItem('nexstock_products', JSON.stringify(products));
+  closeModal();
+  renderDashboard();
+  renderProducts();
+}
+
+function deleteProduct(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  products = products.filter(x => x.id !== id);
+  localStorage.setItem('nexstock_products', JSON.stringify(products));
+  renderDashboard();
+  renderProducts();
+  showToast('Producto eliminado');
+}
+
+function renderDashboard() {
+  const total = products.length;
+  const stockTotal = products.reduce((s, p) => s + (p.stock_total || 0), 0);
+  const stockDisp = products.reduce((s, p) => s + (p.stock_disponible || 0), 0);
+  const critical = products.filter(p => (p.stock_disponible || 0) <= (p.stock_minimo || 0)).length;
+  const avgMargin = total ? products.reduce((s, p) => {
+    const c = calcPrice(p); return s + c.mb;
+  }, 0) / total : 0;
+  const valorInv = products.reduce((s, p) => s + (p.costo || 0) * (p.stock_total || 0), 0);
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-stock').textContent = stockTotal.toLocaleString('es-AR');
+  document.getElementById('stat-available').textContent = stockDisp.toLocaleString('es-AR');
+  document.getElementById('stat-critical').textContent = critical;
+  document.getElementById('stat-margin').textContent = avgMargin.toFixed(1) + '%';
+  document.getElementById('stat-value').textContent = fmt(valorInv);
+
+  const wrap = document.getElementById('dashboard-table-wrap');
+  if (!products.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin productos aún</div><div class="empty-sub">Agregá tu primer producto para ver el dashboard</div><button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button></div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Producto</th><th>Categoría</th><th>Precio sugerido</th><th>Margen</th><th>Stock disp.</th><th>Estado</th>
+    </tr></thead>
+    <tbody>${products.map(p => {
+      const c = calcPrice(p);
+      const isCritical = (p.stock_disponible || 0) <= (p.stock_minimo || 0);
+      const mbClass = c.mb >= 25 ? 'badge-ok' : c.mb >= 15 ? 'badge-mid' : 'badge-warn';
+      return `<tr>
+        <td><div class="product-name">${p.nombre}</div><div class="product-sku">${p.sku || '—'}</div></td>
+        <td><span class="badge badge-mid">${p.categoria}</span></td>
+        <td style="font-weight:600;color:var(--accent)">${fmt(c.precio)}</td>
+        <td>
+          <div class="margin-bar">
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(c.mb,60)/60*100}%"></div></div>
+            <span class="badge ${mbClass}">${c.mb.toFixed(1)}%</span>
+          </div>
+        </td>
+        <td>${(p.stock_disponible||0).toLocaleString('es-AR')}</td>
+        <td><span class="badge ${isCritical ? 'badge-warn' : 'badge-ok'}">${isCritical ? '⚠ Crítico' : '✓ OK'}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderProducts() {
+  const wrap = document.getElementById('products-table-wrap');
+  if (!products.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin productos</div><div class="empty-sub">Agregá productos o importá desde Excel</div><button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button></div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Producto</th><th>Costo</th><th>Precio sugerido</th><th>MB%</th><th>Stock total</th><th>Stock disp.</th><th>Mín.</th><th>Acciones</th>
+    </tr></thead>
+    <tbody>${products.map(p => {
+      const c = calcPrice(p);
+      const isCritical = (p.stock_disponible || 0) <= (p.stock_minimo || 0);
+      const mbClass = c.mb >= 25 ? 'badge-ok' : c.mb >= 15 ? 'badge-mid' : 'badge-warn';
+      return `<tr>
+        <td><div class="product-name">${p.nombre}</div><div class="product-sku">${p.sku || '—'} · ${p.categoria}</div></td>
+        <td>${fmt(p.costo)}</td>
+        <td style="color:var(--accent);font-weight:600">${fmt(c.precio)}</td>
+        <td><span class="badge ${mbClass}">${c.mb.toFixed(1)}%</span></td>
+        <td>${(p.stock_total||0).toLocaleString('es-AR')}</td>
+        <td><span class="${isCritical ? 'badge badge-warn' : ''}">${(p.stock_disponible||0).toLocaleString('es-AR')}</span></td>
+        <td>${p.stock_minimo||0}</td>
+        <td><div class="actions-cell">
+          <button class="icon-btn" onclick="openModal('${p.id}')">✏️</button>
+          <button class="icon-btn del" onclick="deleteProduct('${p.id}')">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function exportExcel() {
+  if (!products.length) { showToast('No hay productos para exportar'); return; }
+  const data = products.map(p => {
+    const c = calcPrice(p);
+    return {
+      'Nombre': p.nombre,
+      'SKU': p.sku,
+      'Categoría': p.categoria,
+      'Costo': p.costo,
+      'Precio sugerido': Math.round(c.precio),
+      'Margen bruto %': Math.round(c.mb * 10) / 10,
+      'Stock total': p.stock_total,
+      'Stock disponible': p.stock_disponible,
+      'Stock mínimo': p.stock_minimo,
+      'Tasa interés %': p.tasa_interes,
+      'Comisión canal %': p.comision_canal,
+      'Comisión cuotas %': p.comision_cuotas,
+      'Impuestos %': p.impuestos,
+      'Margen objetivo %': p.margen_objetivo,
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Nexstock');
+  XLSX.writeFile(wb, 'nexstock_export.xlsx');
+  showToast('Exportado correctamente ✓');
+}
+
+function downloadTemplate() {
+  const template = [{
+    nombre: 'Auricular BT500', sku: 'MOT-BT500', categoria: 'Auriculares',
+    costo: 5000, stock_total: 100, stock_disponible: 80, stock_minimo: 10,
+    tasa_interes: 5, comision_canal: 12, comision_cuotas: 8, impuestos: 21, margen_objetivo: 30
+  }];
+  const ws = XLSX.utils.json_to_sheet(template);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+  XLSX.writeFile(wb, 'nexstock_plantilla.xlsx');
+  showToast('Plantilla descargada ✓');
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+      let imported = 0;
+      rows.forEach(row => {
+        const nombre = row.nombre || row.Nombre || row.NOMBRE;
+        if (!nombre) return;
+        const product = {
+          id: Date.now().toString() + Math.random(),
+          nombre: nombre,
+          sku: row.sku || row.SKU || '',
+          categoria: row.categoria || row.Categoría || 'Accesorios',
+          costo: parseFloat(row.costo || row.Costo || 0),
+          margen_objetivo: parseFloat(row.margen_objetivo || 0),
+          tasa_interes: parseFloat(row.tasa_interes || 0),
+          comision_canal: parseFloat(row.comision_canal || 0),
+          comision_cuotas: parseFloat(row.comision_cuotas || 0),
+          impuestos: parseFloat(row.impuestos || 0),
+          stock_total: parseInt(row.stock_total || 0),
+          stock_disponible: parseInt(row.stock_disponible || 0),
+          stock_minimo: parseInt(row.stock_minimo || 0),
+          created: new Date().toISOString(),
+        };
+        products.push(product);
+        imported++;
+      });
+      localStorage.setItem('nexstock_products', JSON.stringify(products));
+      showToast(`${imported} productos importados ✓`);
+      renderDashboard();
+      renderProducts();
+    } catch(err) {
+      showToast('Error al leer el archivo');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// Initial render
+renderDashboard();
+renderProducts();
+</script>
+</body>
+</html>
