@@ -4,445 +4,130 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexstock</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  /* Fallback: si Google Fonts no carga, usar fuentes del sistema */
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
-</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #13131a;
-    --surface2: #1c1c27;
-    --border: #2a2a3a;
-    --accent: #00e5a0;
-    --accent2: #7b61ff;
-    --warn: #ff6b35;
-    --text: #e8e8f0;
-    --muted: #6b6b88;
-    --success: #00e5a0;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Animated background grid */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* HEADER */
-  header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(10,10,15,0.85);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-  }
-
-  .logo {
-    font-size: 1.4rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--text);
-  }
-  .logo span { color: var(--accent); }
-
-  nav {
-    display: flex;
-    gap: 0.25rem;
-  }
-
-  nav button {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: 'Syne', 'Segoe UI', Arial, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.02em;
-  }
-  nav button:hover { color: var(--text); background: var(--surface2); }
-  nav button.active { color: var(--accent); background: rgba(0,229,160,0.08); }
-
-  .header-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  /* MAIN */
-  main {
-    position: relative;
-    z-index: 1;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  /* VIEWS */
-  .view { display: none; animation: fadeIn 0.3s ease; }
-  .view.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* DASHBOARD */
-  .page-title {
-    font-size: 1.8rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    margin-bottom: 0.25rem;
-  }
-  .page-subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; font-family: 'DM Mono', 'Courier New', monospace; }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .stat-card:hover { border-color: var(--accent); }
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 80px; height: 80px;
-    background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.75rem;
-    font-family: 'DM Mono', 'Courier New', monospace;
-  }
-  .stat-value {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--text);
-  }
-  .stat-value.accent { color: var(--accent); }
-  .stat-value.warn { color: var(--warn); }
-  .stat-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; font-family: 'DM Mono', 'Courier New', monospace; }
-
-  /* PRODUCT TABLE */
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-  }
-  .section-title {
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
-
-  .table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead { background: var(--surface2); }
-  th {
-    padding: 0.875rem 1rem;
-    text-align: left;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-family: 'DM Mono', 'Courier New', monospace;
-    white-space: nowrap;
-  }
-  td {
-    padding: 0.875rem 1rem;
-    font-size: 0.875rem;
-    border-top: 1px solid var(--border);
-    font-family: 'DM Mono', 'Courier New', monospace;
-  }
-  tr:hover td { background: var(--surface2); }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-  }
-  .badge-ok { background: rgba(0,229,160,0.1); color: var(--accent); }
-  .badge-warn { background: rgba(255,107,53,0.1); color: var(--warn); }
-  .badge-mid { background: rgba(123,97,255,0.1); color: var(--accent2); }
-
-  .margin-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .bar-bg {
-    flex: 1;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: var(--accent);
-    transition: width 0.5s ease;
-  }
-
-  /* BUTTONS */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.6rem 1.2rem;
-    border-radius: 10px;
-    font-family: 'Syne', 'Segoe UI', Arial, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s;
-    letter-spacing: 0.02em;
-  }
-  .btn-primary { background: var(--accent); color: #000; }
-  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
-  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-ghost { background: none; color: var(--muted); border: 1px solid var(--border); }
-  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
-  .btn-danger { background: rgba(255,107,53,0.1); color: var(--warn); border: 1px solid rgba(255,107,53,0.2); }
-  .btn-danger:hover { background: rgba(255,107,53,0.2); }
-  .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.78rem; }
-
-  /* MODAL */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(8px);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 560px;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: modalIn 0.25s ease;
-  }
-  @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
-  .modal-title {
-    font-size: 1.2rem;
-    font-weight: 800;
-    margin-bottom: 1.5rem;
-    letter-spacing: -0.02em;
-  }
-
-  /* FORM */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-  .form-group.full { grid-column: 1 / -1; }
-
-  label {
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-family: 'DM Mono', 'Courier New', monospace;
-  }
-
-  input, select {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.7rem 0.9rem;
-    color: var(--text);
-    font-family: 'DM Mono', 'Courier New', monospace;
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-    outline: none;
-    width: 100%;
-  }
-  input:focus, select:focus { border-color: var(--accent); }
-  select option { background: var(--surface2); }
-
-  .pricing-preview {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-top: 1rem;
-  }
-  .pricing-preview-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.75rem;
-    font-family: 'DM Mono', 'Courier New', monospace;
-  }
-  .pricing-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.3rem 0;
-    font-size: 0.82rem;
-    font-family: 'DM Mono', 'Courier New', monospace;
-  }
-  .pricing-row.total {
-    border-top: 1px solid var(--border);
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    font-weight: 600;
-    color: var(--accent);
-  }
-  .pricing-row span:first-child { color: var(--muted); }
-
-  .modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-  }
-
-  /* IMPORT SECTION */
-  .import-zone {
-    border: 2px dashed var(--border);
-    border-radius: 16px;
-    padding: 3rem 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 1.5rem;
-  }
-  .import-zone:hover { border-color: var(--accent); background: rgba(0,229,160,0.03); }
-  .import-zone-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-  .import-zone-text { color: var(--muted); font-size: 0.9rem; }
-  .import-zone-text strong { color: var(--text); display: block; margin-bottom: 0.25rem; font-size: 1rem; }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: var(--muted);
-  }
-  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
-  .empty-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
-  .empty-sub { font-size: 0.85rem; margin-bottom: 1.5rem; }
-
-  /* TOAST */
-  .toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    border-radius: 12px;
-    padding: 0.875rem 1.25rem;
-    font-size: 0.875rem;
-    font-family: 'DM Mono', 'Courier New', monospace;
-    color: var(--accent);
-    z-index: 999;
-    animation: toastIn 0.3s ease;
-    display: none;
-  }
-  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* ACTION ICONS */
-  .actions-cell { display: flex; gap: 0.4rem; }
-
-  .icon-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-  }
-  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .icon-btn.del:hover { border-color: var(--warn); color: var(--warn); }
-
-  .product-name { font-weight: 600; color: var(--text); font-family: 'Syne', sans-serif; font-size: 0.85rem; }
-  .product-sku { color: var(--muted); font-size: 0.75rem; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
-
-  .highlight { color: var(--accent); }
-
-  @media (max-width: 768px) {
-    main { padding: 1rem; }
-    .form-grid { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
-    nav button span { display: none; }
-  }
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0b0c10; --surface:#14151c; --surface2:#1d1e28;
+  --border:#2c2d3d; --accent:#00e5a0; --accent2:#7b61ff;
+  --warn:#ff6b35; --text:#e8e8f0; --muted:#6b6b88;
+}
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,-apple-system,sans-serif; min-height:100vh; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,229,160,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.025) 1px,transparent 1px); background-size:48px 48px; pointer-events:none; z-index:0; }
+header { position:sticky; top:0; z-index:100; background:rgba(11,12,16,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; height:60px; }
+.logo { font-size:1.3rem; font-weight:800; letter-spacing:-0.03em; }
+.logo span { color:var(--accent); }
+nav { display:flex; gap:0.2rem; flex-wrap:wrap; }
+nav button { background:none; border:none; color:var(--muted); font-family:inherit; font-size:0.8rem; font-weight:600; padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; transition:all 0.2s; }
+nav button:hover { color:var(--text); background:var(--surface2); }
+nav button.active { color:var(--accent); background:rgba(0,229,160,0.08); }
+main { position:relative; z-index:1; max-width:1500px; margin:0 auto; padding:1.5rem; }
+.view { display:none; animation:fadeIn 0.25s ease; }
+.view.active { display:block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+.page-header { margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; }
+.page-title { font-size:1.5rem; font-weight:800; letter-spacing:-0.03em; }
+.page-sub { color:var(--muted); font-size:0.8rem; margin-top:0.2rem; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.1rem; transition:border-color 0.2s; }
+.stat-card:hover { border-color:var(--accent); }
+.stat-label { font-size:0.67rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--muted); margin-bottom:0.45rem; }
+.stat-val { font-size:1.7rem; font-weight:800; letter-spacing:-0.02em; }
+.stat-val.green { color:var(--accent); }
+.stat-val.orange { color:var(--warn); }
+.stat-val.purple { color:var(--accent2); }
+.stat-sub { font-size:0.7rem; color:var(--muted); margin-top:0.2rem; }
+.table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.table-toolbar { display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border); gap:0.5rem; flex-wrap:wrap; }
+.toolbar-left { display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; }
+.toolbar-right { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.search-input { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:0.4rem 0.7rem; color:var(--text); font-family:inherit; font-size:0.8rem; outline:none; width:190px; transition:border-color 0.2s; }
+.search-input:focus { border-color:var(--accent); }
+.filter-select { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:0.4rem 0.7rem; color:var(--text); font-family:inherit; font-size:0.8rem; outline:none; cursor:pointer; }
+table { width:100%; border-collapse:collapse; }
+thead { background:var(--surface2); }
+th { padding:0.65rem 0.9rem; text-align:left; font-size:0.65rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+td { padding:0.65rem 0.9rem; font-size:0.8rem; border-top:1px solid var(--border); }
+tr:hover td { background:rgba(255,255,255,0.015); }
+.prod-name { font-weight:600; }
+.prod-sku { font-size:0.7rem; color:var(--muted); margin-top:0.1rem; font-family:'Courier New',monospace; }
+.badge { display:inline-flex; align-items:center; padding:0.13rem 0.5rem; border-radius:5px; font-size:0.65rem; font-weight:700; letter-spacing:0.04em; }
+.badge-green { background:rgba(0,229,160,0.1); color:var(--accent); }
+.badge-orange { background:rgba(255,107,53,0.1); color:var(--warn); }
+.badge-purple { background:rgba(123,97,255,0.1); color:var(--accent2); }
+.stock-bar { display:flex; align-items:center; gap:0.4rem; }
+.bar-bg { flex:1; height:3px; background:var(--border); border-radius:2px; min-width:45px; }
+.bar-fill { height:100%; border-radius:2px; }
+.btn { display:inline-flex; align-items:center; gap:0.3rem; padding:0.45rem 0.9rem; border-radius:8px; font-family:inherit; font-size:0.8rem; font-weight:700; cursor:pointer; border:none; transition:all 0.18s; }
+.btn-primary { background:var(--accent); color:#000; }
+.btn-primary:hover { background:#00ffb3; }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+.btn-ghost { background:none; color:var(--muted); border:1px solid var(--border); }
+.btn-ghost:hover { color:var(--text); }
+.btn-danger { background:rgba(255,107,53,0.1); color:var(--warn); border:1px solid rgba(255,107,53,0.2); }
+.btn-danger:hover { background:rgba(255,107,53,0.2); }
+.btn-sm { padding:0.35rem 0.7rem; font-size:0.75rem; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); backdrop-filter:blur(8px); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:1.6rem; width:100%; max-width:520px; max-height:92vh; overflow-y:auto; animation:modalIn 0.2s ease; }
+.modal-lg { max-width:700px; }
+@keyframes modalIn { from{opacity:0;transform:scale(0.96);} to{opacity:1;transform:scale(1);} }
+.modal-title { font-size:1.05rem; font-weight:800; margin-bottom:1.1rem; }
+.modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.1rem; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; }
+.form-group { display:flex; flex-direction:column; gap:0.3rem; }
+.form-group.full { grid-column:1/-1; }
+label { font-size:0.65rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
+input,select,textarea { background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:0.55rem 0.8rem; color:var(--text); font-family:inherit; font-size:0.83rem; outline:none; width:100%; transition:border-color 0.2s; }
+input:focus,select:focus,textarea:focus { border-color:var(--accent); }
+input[type=number]::-webkit-inner-spin-button { opacity:1; }
+.calc-box { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:1rem; }
+.calc-title { font-size:0.65rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; }
+.calc-row { display:flex; justify-content:space-between; align-items:center; padding:0.24rem 0; font-size:0.78rem; }
+.calc-row span:first-child { color:var(--muted); }
+.calc-row.total { border-top:1px solid var(--border); margin-top:0.5rem; padding-top:0.6rem; font-weight:700; color:var(--accent); }
+.calc-row.total span:first-child { color:var(--accent); }
+.import-zone { border:2px dashed var(--border); border-radius:14px; padding:2.2rem; text-align:center; cursor:pointer; transition:all 0.2s; margin-bottom:1.1rem; }
+.import-zone:hover { border-color:var(--accent); background:rgba(0,229,160,0.02); }
+.import-icon { font-size:1.8rem; margin-bottom:0.5rem; }
+.import-text strong { display:block; font-size:0.92rem; font-weight:700; margin-bottom:0.2rem; }
+.import-text { color:var(--muted); font-size:0.8rem; }
+.info-box { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.1rem; }
+.info-title { font-size:0.82rem; font-weight:700; margin-bottom:0.65rem; }
+.empty { text-align:center; padding:2.5rem 1rem; color:var(--muted); }
+.empty-icon { font-size:2rem; margin-bottom:0.5rem; }
+.empty-title { font-size:0.95rem; font-weight:700; color:var(--text); margin-bottom:0.3rem; }
+.empty-sub { font-size:0.8rem; margin-bottom:1.1rem; }
+.toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface); border:1px solid var(--accent); border-radius:10px; padding:0.7rem 1rem; font-size:0.8rem; color:var(--accent); z-index:999; display:none; max-width:300px; }
+.actions-cell { display:flex; gap:0.3rem; }
+.icon-btn { background:none; border:1px solid var(--border); border-radius:6px; color:var(--muted); cursor:pointer; padding:0.24rem 0.44rem; font-size:0.76rem; transition:all 0.18s; }
+.icon-btn:hover { border-color:var(--accent); color:var(--accent); }
+.icon-btn.del:hover { border-color:var(--warn); color:var(--warn); }
+/* Pricing layout */
+.pricing-layout { display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; }
+.impuesto-row { display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem; }
+.impuesto-row input { flex:1; }
+.impuesto-row input:first-child { flex:2; }
+.add-imp-btn { background:rgba(0,229,160,0.1); border:1px solid var(--accent); color:var(--accent); border-radius:8px; padding:0.4rem 0.7rem; font-size:0.8rem; cursor:pointer; font-family:inherit; font-weight:700; white-space:nowrap; }
+.add-imp-btn:hover { background:rgba(0,229,160,0.2); }
+.rm-imp-btn { background:rgba(255,107,53,0.1); border:1px solid rgba(255,107,53,0.3); color:var(--warn); border-radius:6px; padding:0.3rem 0.5rem; font-size:0.8rem; cursor:pointer; }
+/* Comisiones table */
+.comision-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+.comision-table th,.comision-table td { padding:0.5rem 0.7rem; border:1px solid var(--border); text-align:center; }
+.comision-table th { background:var(--surface2); font-size:0.65rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); }
+.comision-table td:first-child { text-align:left; font-weight:600; }
+.comision-table input { background:transparent; border:none; text-align:center; color:var(--text); font-family:inherit; font-size:0.8rem; width:60px; outline:none; padding:0; }
+.comision-table input:focus { background:rgba(0,229,160,0.05); border-radius:4px; }
+/* Highlight selected */
+.highlight-row td { background:rgba(0,229,160,0.04) !important; }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+.divider { height:1px; background:var(--border); margin:1rem 0; }
+.section-title { font-size:0.9rem; font-weight:800; margin-bottom:0.9rem; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+@media(max-width:768px) { .pricing-layout,.two-col,.form-grid { grid-template-columns:1fr; } .stats-grid { grid-template-columns:1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -450,220 +135,317 @@
 <header>
   <div class="logo">Nex<span>stock</span></div>
   <nav>
-    <button class="active" onclick="showView('dashboard')">📊 <span>Dashboard</span></button>
-    <button onclick="showView('products')">📦 <span>Productos</span></button>
-    <button onclick="showView('import')">📥 <span>Importar</span></button>
+    <button class="active" onclick="showView('dashboard',this)">📊 Dashboard</button>
+    <button onclick="showView('catalogo',this)">📦 Catálogo</button>
+    <button onclick="showView('pricing',this)">💰 Pricing</button>
+    <button onclick="showView('stock',this)">📥 Stock</button>
+    <button onclick="showView('ventas',this)">📈 Ventas</button>
+    <button onclick="showView('compras',this)">🛒 Compras</button>
+    <button onclick="showView('config',this)">⚙️ Config</button>
   </nav>
-  <div class="header-actions">
-    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Producto</button>
-  </div>
+  <div></div>
 </header>
 
 <main>
 
-  <!-- DASHBOARD VIEW -->
-  <div class="view active" id="view-dashboard">
-    <div class="page-title">Dashboard</div>
-    <div class="page-subtitle" id="dash-date"></div>
-
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Total Productos</div>
-        <div class="stat-value accent" id="stat-total">0</div>
-        <div class="stat-sub">SKUs activos</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Stock Total</div>
-        <div class="stat-value" id="stat-stock">0</div>
-        <div class="stat-sub">unidades en inventario</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Stock Disponible</div>
-        <div class="stat-value accent" id="stat-available">0</div>
-        <div class="stat-sub">unidades para venta</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Stock Crítico</div>
-        <div class="stat-value warn" id="stat-critical">0</div>
-        <div class="stat-sub">productos bajo mínimo</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Margen Prom.</div>
-        <div class="stat-value accent" id="stat-margin">0%</div>
-        <div class="stat-sub">margen bruto promedio</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Valor Inventario</div>
-        <div class="stat-value" id="stat-value">$0</div>
-        <div class="stat-sub">a precio de costo</div>
-      </div>
-    </div>
-
-    <div class="section-header">
-      <div class="section-title">Resumen de productos</div>
-    </div>
-    <div class="table-wrap" id="dashboard-table-wrap">
-      <div class="empty-state">
-        <div class="empty-icon">📦</div>
-        <div class="empty-title">Sin productos aún</div>
-        <div class="empty-sub">Agregá tu primer producto para ver el dashboard</div>
-        <button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button>
-      </div>
-    </div>
+<!-- DASHBOARD -->
+<div class="view active" id="view-dashboard">
+  <div class="page-header">
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date"></div></div>
   </div>
-
-  <!-- PRODUCTS VIEW -->
-  <div class="view" id="view-products">
-    <div class="page-title">Productos</div>
-    <div class="page-subtitle">Gestioná tu catálogo y precios</div>
-
-    <div class="section-header">
-      <div></div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn btn-secondary btn-sm" onclick="exportExcel()">↓ Exportar Excel</button>
-        <button class="btn btn-primary btn-sm" onclick="openModal()">+ Nuevo producto</button>
-      </div>
-    </div>
-
-    <div class="table-wrap" id="products-table-wrap">
-      <div class="empty-state">
-        <div class="empty-icon">📦</div>
-        <div class="empty-title">Sin productos</div>
-        <div class="empty-sub">Agregá productos o importá desde Excel</div>
-        <button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button>
-      </div>
-    </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Productos</div><div class="stat-val green" id="st-prods">0</div><div class="stat-sub">SKUs en catálogo</div></div>
+    <div class="stat-card"><div class="stat-label">Stock Total</div><div class="stat-val" id="st-total">0</div><div class="stat-sub">unidades en depósito</div></div>
+    <div class="stat-card"><div class="stat-label">Disponible venta</div><div class="stat-val green" id="st-disp">0</div><div class="stat-sub">unidades disponibles</div></div>
+    <div class="stat-card"><div class="stat-label">Sin stock</div><div class="stat-val orange" id="st-crit">0</div><div class="stat-sub">productos en cero</div></div>
+    <div class="stat-card"><div class="stat-label">Ventas 30 días</div><div class="stat-val purple" id="st-ventas30">0</div><div class="stat-sub">unidades vendidas</div></div>
+    <div class="stat-card"><div class="stat-label">Última importación</div><div class="stat-val" style="font-size:0.9rem;padding-top:0.4rem" id="st-ultima">—</div></div>
   </div>
-
-  <!-- IMPORT VIEW -->
-  <div class="view" id="view-import">
-    <div class="page-title">Importar datos</div>
-    <div class="page-subtitle">Cargá tu inventario desde Excel</div>
-
-    <div class="import-zone" onclick="document.getElementById('file-input').click()">
-      <div class="import-zone-icon">📂</div>
-      <div class="import-zone-text">
-        <strong>Arrastrá tu archivo Excel aquí</strong>
-        o hacé click para seleccionarlo (.xlsx, .xls, .csv)
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="toolbar-left">
+        <input class="search-input" placeholder="🔍 Buscar producto..." oninput="dashFilter.search=this.value;renderDash()">
+        <select class="filter-select" onchange="dashFilter.categ=this.value;renderDash()" id="dash-categ"><option value="">Todas las categorías</option></select>
+        <select class="filter-select" onchange="dashFilter.estado=this.value;renderDash()">
+          <option value="">Todos los estados</option>
+          <option value="ok">✓ Con stock</option>
+          <option value="crit">⚠ Sin stock</option>
+        </select>
       </div>
     </div>
-    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileImport(event)">
+    <div id="dash-body"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin datos</div><div class="empty-sub">Importá tu Excel de Oracle en la sección Stock</div></div></div>
+  </div>
+</div>
 
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;">
-      <div class="section-title" style="margin-bottom:1rem;">Formato esperado del Excel</div>
-      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;font-family:'DM Mono',monospace;">
-        Tu archivo debe tener estas columnas (el orden no importa):
-      </p>
+<!-- CATÁLOGO -->
+<div class="view" id="view-catalogo">
+  <div class="page-header">
+    <div><div class="page-title">Catálogo</div><div class="page-sub">Alta de SKU, nombre comercial y EAN</div></div>
+    <button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Nuevo producto</button>
+  </div>
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="toolbar-left"><input class="search-input" placeholder="🔍 Buscar..." oninput="renderCat(this.value)"></div>
+      <div class="toolbar-right"><button class="btn btn-secondary btn-sm" onclick="exportCat()">↓ Exportar</button></div>
+    </div>
+    <div id="cat-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Catálogo vacío</div><div class="empty-sub">Cargá tus productos con SKU, nombre comercial y EAN</div><button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Agregar</button></div></div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<div class="view" id="view-pricing">
+  <div class="page-header"><div><div class="page-title">Pricing</div><div class="page-sub">Calculá precios de venta con todas las variables</div></div></div>
+  <div class="pricing-layout">
+    <!-- LEFT: INPUTS -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- Producto y costo -->
+      <div class="table-wrap" style="padding:1.2rem">
+        <div class="section-title">Producto</div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Seleccioná un producto</label>
+            <select id="p-prod" onchange="onProdSelect()"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="form-group">
+            <label>Costo ($) <span style="color:var(--accent);font-size:0.65rem">auto desde base</span></label>
+            <input type="number" id="p-costo" placeholder="0" oninput="calcPricing()">
+          </div>
+          <div class="form-group">
+            <label>Margen objetivo (%)</label>
+            <input type="number" id="p-margen" placeholder="30" oninput="calcPricing()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketplace y cuotas -->
+      <div class="table-wrap" style="padding:1.2rem">
+        <div class="section-title">Canal de venta</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Marketplace</label>
+            <select id="p-mp" onchange="onMpChange()"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="form-group">
+            <label>Cuotas</label>
+            <select id="p-cuotas" onchange="onCuotasChange()">
+              <option value="">— Seleccioná —</option>
+              <option value="1">1 cuota</option>
+              <option value="3">3 cuotas</option>
+              <option value="6">6 cuotas</option>
+              <option value="9">9 cuotas</option>
+              <option value="12">12 cuotas</option>
+              <option value="15">15 cuotas</option>
+              <option value="18">18 cuotas</option>
+              <option value="21">21 cuotas</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Comisión canal (%) <span style="color:var(--accent);font-size:0.65rem">auto</span></label>
+            <input type="number" id="p-comcanal" placeholder="0" oninput="calcPricing()">
+          </div>
+          <div class="form-group">
+            <label>Comisión cuotas (%) <span style="color:var(--accent);font-size:0.65rem">auto</span></label>
+            <input type="number" id="p-comcuotas" placeholder="0" oninput="calcPricing()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Financiación -->
+      <div class="table-wrap" style="padding:1.2rem">
+        <div class="section-title">Financiación</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Tasa interés anual (%)</label>
+            <input type="number" id="p-tasa" placeholder="120" oninput="calcPricing()">
+          </div>
+          <div class="form-group">
+            <label>Plazo de pago (días)</label>
+            <input type="number" id="p-plazo" placeholder="30" oninput="calcPricing()">
+          </div>
+          <div class="form-group full">
+            <label>Interés resultante (%) <span style="color:var(--accent);font-size:0.65rem">calculado automáticamente</span></label>
+            <input type="number" id="p-interes-calc" placeholder="0" readonly style="background:rgba(0,229,160,0.05);border-color:var(--accent);opacity:0.8">
+          </div>
+        </div>
+      </div>
+
+      <!-- Impuestos -->
+      <div class="table-wrap" style="padding:1.2rem">
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+          Impuestos
+          <button class="add-imp-btn" onclick="addImpuesto()">+ Agregar impuesto</button>
+        </div>
+        <div id="impuestos-list"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: RESULTADO -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="table-wrap" style="padding:1.2rem">
+        <div class="section-title">Resultado</div>
+        <div class="calc-box">
+          <div class="calc-title">Desglose del precio</div>
+          <div class="calc-row"><span>Costo base</span><span id="r-costo">$0</span></div>
+          <div class="calc-row"><span>+ Interés financiero</span><span id="r-interes">$0</span></div>
+          <div class="calc-row"><span>+ Comisión canal</span><span id="r-canal">$0</span></div>
+          <div class="calc-row"><span>+ Comisión cuotas</span><span id="r-cuotas">$0</span></div>
+          <div id="r-impuestos-rows"></div>
+          <div class="calc-row"><span>+ Margen objetivo</span><span id="r-margen">$0</span></div>
+          <div class="calc-row total"><span>Precio sugerido</span><span id="r-total">$0</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-top:0.8rem">
+          <div class="stat-card" style="padding:0.8rem"><div class="stat-label">Margen bruto</div><div class="stat-val green" id="r-mb" style="font-size:1.4rem">0%</div></div>
+          <div class="stat-card" style="padding:0.8rem"><div class="stat-label">Ganancia neta</div><div class="stat-val" id="r-gan" style="font-size:1.2rem">$0</div></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:0.8rem" onclick="guardarPricing()">💾 Guardar precio</button>
+      </div>
+
+      <!-- Precios guardados -->
       <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Columna</th>
-              <th>Ejemplo</th>
-              <th>Descripción</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>nombre</td><td>Auricular BT500</td><td>Nombre del producto</td></tr>
-            <tr><td>sku</td><td>MOT-BT500</td><td>Código único</td></tr>
-            <tr><td>categoria</td><td>Auriculares</td><td>Categoría del producto</td></tr>
-            <tr><td>costo</td><td>5000</td><td>Costo en moneda local</td></tr>
-            <tr><td>stock_total</td><td>100</td><td>Stock total en depósito</td></tr>
-            <tr><td>stock_disponible</td><td>80</td><td>Stock disponible para venta</td></tr>
-            <tr><td>stock_minimo</td><td>10</td><td>Alerta de stock crítico</td></tr>
-            <tr><td>tasa_interes</td><td>5</td><td>% tasa financiera</td></tr>
-            <tr><td>comision_canal</td><td>12</td><td>% comisión del canal (ML, etc)</td></tr>
-            <tr><td>comision_cuotas</td><td>8</td><td>% costo de cuotas</td></tr>
-            <tr><td>impuestos</td><td>21</td><td>% impuestos (IVA, etc)</td></tr>
-            <tr><td>margen_objetivo</td><td>30</td><td>% margen bruto objetivo</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:1rem;">
-        <button class="btn btn-secondary btn-sm" onclick="downloadTemplate()">↓ Descargar plantilla</button>
+        <div class="table-toolbar">
+          <div style="font-size:0.82rem;font-weight:700">Precios guardados</div>
+          <button class="btn btn-secondary btn-sm" onclick="exportPricing()">↓ Exportar</button>
+        </div>
+        <div id="pricing-saved"><div class="empty" style="padding:1.5rem"><div class="empty-sub">Guardá precios para verlos acá</div></div></div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- STOCK -->
+<div class="view" id="view-stock">
+  <div class="page-header"><div><div class="page-title">Importar Stock</div><div class="page-sub">Subí la bajada de Oracle tal como la exportás</div></div></div>
+  <div class="import-zone" onclick="document.getElementById('file-stock').click()">
+    <div class="import-icon">📂</div>
+    <div class="import-text"><strong>Arrastrá tu Excel de Oracle aquí</strong>o hacé click para seleccionar (.xlsx, .xls)</div>
+  </div>
+  <input type="file" id="file-stock" accept=".xlsx,.xls" style="display:none" onchange="importStock(event)">
+  <div class="info-box">
+    <div class="info-title">Columnas leídas de tu Excel</div>
+    <table style="width:100%;font-size:0.8rem;border-collapse:collapse;margin-top:0.5rem">
+      <thead><tr style="background:var(--surface2)"><th style="padding:0.5rem;text-align:left;color:var(--muted);font-size:0.65rem;text-transform:uppercase">Columna</th><th style="padding:0.5rem;text-align:left;color:var(--muted);font-size:0.65rem;text-transform:uppercase">Campo</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">B — Artículo</td><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">SKU (clave de cruce con catálogo)</td></tr>
+        <tr><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">C — Descripción</td><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">Descripción Oracle</td></tr>
+        <tr><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">D — Stock Total</td><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">Unidades en depósito</td></tr>
+        <tr><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">E — Disponible</td><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">Unidades disponibles para venta</td></tr>
+        <tr><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">I — Marca</td><td style="padding:0.45rem 0.5rem;border-top:1px solid var(--border)">Marca</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.7rem;font-size:0.75rem;color:var(--muted)">⚠️ Los datos deben empezar en la fila 3 (fila 1 y 2 son encabezados).</p>
+  </div>
+</div>
+
+<!-- VENTAS -->
+<div class="view" id="view-ventas">
+  <div class="page-header"><div><div class="page-title">Ventas</div><div class="page-sub">Unidades vendidas por SKU — últimos 30 días</div></div></div>
+  <div class="import-zone" onclick="document.getElementById('file-ventas').click()">
+    <div class="import-icon">📈</div>
+    <div class="import-text"><strong>Importar Excel de ventas</strong>Columnas: A=Fecha, L=Negocio, S=SKU, AS=Cantidad</div>
+  </div>
+  <input type="file" id="file-ventas" accept=".xlsx,.xls" style="display:none" onchange="importVentas(event)">
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="toolbar-left">
+        <input class="search-input" placeholder="🔍 Buscar SKU..." oninput="renderVentas(this.value)">
+        <select class="filter-select" onchange="ventasFiltroNeg=this.value;renderVentas()" id="ventas-neg-filter"><option value="">Todos los negocios</option></select>
+      </div>
+      <div class="toolbar-right"><button class="btn btn-secondary btn-sm" onclick="exportVentas()">↓ Exportar</button></div>
+    </div>
+    <div id="ventas-body"><div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Sin datos de ventas</div><div class="empty-sub">Importá tu Excel de ventas para ver las unidades por SKU</div></div></div>
+  </div>
+</div>
+
+<!-- COMPRAS -->
+<div class="view" id="view-compras">
+  <div class="page-header">
+    <div><div class="page-title">Compras</div><div class="page-sub">Órdenes de compra y detalle de SKUs</div></div>
+    <button class="btn btn-primary btn-sm" onclick="openOCModal()">+ Nueva OC</button>
+  </div>
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="toolbar-left"><input class="search-input" placeholder="🔍 Buscar OC o SKU..." oninput="renderCompras(this.value)"></div>
+    </div>
+    <div id="compras-body"><div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Sin órdenes de compra</div><div class="empty-sub">Registrá tus OCs para tener el historial de compras</div><button class="btn btn-primary btn-sm" onclick="openOCModal()">+ Nueva OC</button></div></div>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="view" id="view-config">
+  <div class="page-header"><div><div class="page-title">Configuración</div><div class="page-sub">Comisiones por marketplace y base de costos</div></div></div>
+
+  <!-- Marketplaces -->
+  <div class="table-wrap" style="margin-bottom:1.2rem;padding:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin:0">Marketplaces</div>
+      <button class="btn btn-secondary btn-sm" onclick="addMarketplace()">+ Agregar marketplace</button>
+    </div>
+    <div id="mp-list"></div>
+  </div>
+
+  <!-- Tabla comisiones -->
+  <div class="table-wrap" style="margin-bottom:1.2rem;padding:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin:0">Comisiones por marketplace y cuotas</div>
+      <button class="btn btn-primary btn-sm" onclick="saveComisiones()">Guardar comisiones</button>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.8rem">Completá los % de comisión para cada combinación. Actualizalos cuando cambien.</p>
+    <div style="overflow-x:auto"><div id="comisiones-table"></div></div>
+  </div>
+
+  <!-- Base de costos -->
+  <div class="table-wrap" style="padding:1.2rem">
+    <div class="section-title">Base de costos</div>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.8rem">Importá el Excel de costos de Oracle. Se va a usar para autocompletar el costo en pricing.</p>
+    <div class="import-zone" style="padding:1.5rem" onclick="document.getElementById('file-costos').click()">
+      <div class="import-icon">💲</div>
+      <div class="import-text"><strong>Importar Excel de costos</strong>Columna A=SKU, G=Subelemento (filtrar "(TODOS)"), H=Costo</div>
+    </div>
+    <input type="file" id="file-costos" accept=".xlsx,.xls" style="display:none" onchange="importCostos(event)">
+    <div id="costos-status" style="font-size:0.8rem;color:var(--muted)"></div>
+  </div>
+</div>
 
 </main>
 
-<!-- MODAL -->
-<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+<!-- MODAL CATALOGO -->
+<div class="modal-overlay" id="modal-cat" onclick="closeOut(event,'modal-cat')">
   <div class="modal">
-    <div class="modal-title" id="modal-title">Nuevo producto</div>
+    <div class="modal-title" id="cat-title">Nuevo producto</div>
     <div class="form-grid">
-      <div class="form-group full">
-        <label>Nombre del producto</label>
-        <input type="text" id="f-nombre" placeholder="Ej: Auricular Motorola BT500" oninput="updatePreview()">
+      <div class="form-group"><label>SKU Oracle (Artículo)</label><input type="text" id="c-sku" placeholder="91GUITAR-BERRY-NS"></div>
+      <div class="form-group"><label>EAN</label><input type="text" id="c-ean" placeholder="7798123456789"></div>
+      <div class="form-group full"><label>Nombre comercial</label><input type="text" id="c-nombre" placeholder="Moto Buds"></div>
+      <div class="form-group full"><label>Descripción (opcional)</label><input type="text" id="c-desc" placeholder="Auricular Bluetooth..."></div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="c-categ"><option>Auriculares</option><option>Cargadores</option><option>Parlantes</option><option>Tags</option><option>Smartwatch</option><option>Accesorios</option><option>Otro</option></select>
       </div>
-      <div class="form-group">
-        <label>SKU / Código</label>
-        <input type="text" id="f-sku" placeholder="MOT-BT500">
-      </div>
-      <div class="form-group">
-        <label>Categoría</label>
-        <select id="f-categoria" onchange="updatePreview()">
-          <option value="Auriculares">Auriculares</option>
-          <option value="Cargadores">Cargadores</option>
-          <option value="Parlantes">Parlantes</option>
-          <option value="Tags">Tags</option>
-          <option value="Accesorios">Accesorios</option>
-          <option value="Otro">Otro</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Costo ($)</label>
-        <input type="number" id="f-costo" placeholder="5000" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Margen objetivo (%)</label>
-        <input type="number" id="f-margen" placeholder="30" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Tasa de interés (%)</label>
-        <input type="number" id="f-interes" placeholder="5" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Comisión canal (%)</label>
-        <input type="number" id="f-comision-canal" placeholder="12" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Comisión cuotas (%)</label>
-        <input type="number" id="f-comision-cuotas" placeholder="8" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Impuestos (%)</label>
-        <input type="number" id="f-impuestos" placeholder="21" oninput="updatePreview()">
-      </div>
-      <div class="form-group">
-        <label>Stock total</label>
-        <input type="number" id="f-stock-total" placeholder="100">
-      </div>
-      <div class="form-group">
-        <label>Stock disponible</label>
-        <input type="number" id="f-stock-disp" placeholder="80">
-      </div>
-      <div class="form-group">
-        <label>Stock mínimo (alerta)</label>
-        <input type="number" id="f-stock-min" placeholder="10">
-      </div>
+      <div class="form-group"><label>Stock mínimo</label><input type="number" id="c-min" placeholder="10"></div>
     </div>
-
-    <div class="pricing-preview" id="pricing-preview">
-      <div class="pricing-preview-title">Vista previa de pricing</div>
-      <div class="pricing-row"><span>Costo base</span><span id="prev-costo">$0</span></div>
-      <div class="pricing-row"><span>+ Tasa interés</span><span id="prev-interes">$0</span></div>
-      <div class="pricing-row"><span>+ Comisión canal</span><span id="prev-canal">$0</span></div>
-      <div class="pricing-row"><span>+ Comisión cuotas</span><span id="prev-cuotas">$0</span></div>
-      <div class="pricing-row"><span>+ Impuestos</span><span id="prev-impuestos">$0</span></div>
-      <div class="pricing-row"><span>+ Margen objetivo</span><span id="prev-margen">$0</span></div>
-      <div class="pricing-row total"><span>Precio de venta sugerido</span><span id="prev-total">$0</span></div>
-      <div class="pricing-row"><span>Margen bruto real</span><span id="prev-mb" style="color:var(--accent)">0%</span></div>
-    </div>
-
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveProduct()">Guardar producto</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-cat')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCat()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OC -->
+<div class="modal-overlay" id="modal-oc" onclick="closeOut(event,'modal-oc')">
+  <div class="modal modal-lg">
+    <div class="modal-title">Nueva Orden de Compra</div>
+    <div class="form-grid" style="margin-bottom:1rem">
+      <div class="form-group"><label>Nro. OC</label><input type="text" id="oc-nro" placeholder="OC-2026-001"></div>
+      <div class="form-group"><label>Fecha</label><input type="date" id="oc-fecha"></div>
+      <div class="form-group full"><label>Proveedor / Observaciones</label><input type="text" id="oc-obs" placeholder="Proveedor, notas..."></div>
+    </div>
+    <div class="section-title" style="font-size:0.85rem">SKUs de la orden</div>
+    <div id="oc-items"></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem" onclick="addOCItem()">+ Agregar SKU</button>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-oc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOC()">Guardar OC</button>
     </div>
   </div>
 </div>
@@ -671,325 +453,437 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let products = JSON.parse(localStorage.getItem('nexstock_products') || '[]');
-let editingId = null;
+// ===== STATE =====
+let catalogo = JSON.parse(localStorage.getItem('nx_cat')||'[]');
+let stockData = JSON.parse(localStorage.getItem('nx_stock')||'[]');
+let ventasData = JSON.parse(localStorage.getItem('nx_ventas')||'[]');
+let comprasData = JSON.parse(localStorage.getItem('nx_compras')||'[]');
+let costosBase = JSON.parse(localStorage.getItem('nx_costos')||'{}');
+let marketplaces = JSON.parse(localStorage.getItem('nx_mp')||'["Mercado Libre","Tienda Motorola"]');
+let comisiones = JSON.parse(localStorage.getItem('nx_comisiones')||'{}');
+let pricingData = JSON.parse(localStorage.getItem('nx_pricing')||'[]');
+let impuestos = JSON.parse(localStorage.getItem('nx_impuestos')||'[{"nombre":"IVA","pct":21}]');
+let editCatId = null;
+let dashFilter = {search:'',categ:'',estado:''};
+let ventasFiltroNeg = '';
+const CUOTAS = [1,3,6,9,12,15,18,21];
 
-// Init
-document.getElementById('dash-date').textContent = new Date().toLocaleDateString('es-AR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+// ===== INIT =====
+document.getElementById('dash-date').textContent = new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const ultiImp = localStorage.getItem('nx_ultima');
+if(ultiImp) document.getElementById('st-ultima').textContent = ultiImp;
+renderDash(); renderCat(); renderPricingSelects(); renderImpuestos(); renderPricingTable();
+renderCompras(); renderConfigMp(); renderComisionesTable(); renderVentas();
 
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-  if (name === 'dashboard') renderDashboard();
-  if (name === 'products') renderProducts();
+function showView(name,btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name==='pricing') renderPricingSelects();
+  if(name==='config') { renderConfigMp(); renderComisionesTable(); }
 }
 
-function fmt(n) {
-  return '$' + Math.round(n).toLocaleString('es-AR');
+function fmt(n) { return '$'+Math.round(n||0).toLocaleString('es-AR'); }
+function pct(n) { return (Math.round((n||0)*10)/10)+'%'; }
+
+// ===== DASHBOARD =====
+function renderDash() {
+  const merged = getMerged();
+  let data = merged;
+  if(dashFilter.search) data=data.filter(d=>d.nombre.toLowerCase().includes(dashFilter.search.toLowerCase())||d.sku.toLowerCase().includes(dashFilter.search.toLowerCase()));
+  if(dashFilter.categ) data=data.filter(d=>d.categ===dashFilter.categ);
+  if(dashFilter.estado==='ok') data=data.filter(d=>(d.stockDisp||0)>0);
+  if(dashFilter.estado==='crit') data=data.filter(d=>(d.stockDisp||0)===0);
+
+  document.getElementById('st-prods').textContent = catalogo.length;
+  document.getElementById('st-total').textContent = merged.reduce((s,d)=>s+(d.stockTotal||0),0).toLocaleString('es-AR');
+  document.getElementById('st-disp').textContent = merged.reduce((s,d)=>s+(d.stockDisp||0),0).toLocaleString('es-AR');
+  document.getElementById('st-crit').textContent = merged.filter(d=>(d.stockDisp||0)===0).length;
+  document.getElementById('st-ventas30').textContent = getVentas30().toLocaleString('es-AR');
+
+  const categs=[...new Set(merged.map(d=>d.categ).filter(c=>c&&c!=='—'))];
+  const sel=document.getElementById('dash-categ');
+  sel.innerHTML='<option value="">Todas las categorías</option>'+categs.map(c=>`<option value="${c}" ${c===dashFilter.categ?'selected':''}>${c}</option>`).join('');
+
+  const body=document.getElementById('dash-body');
+  if(!stockData.length){body.innerHTML=`<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin datos de stock</div><div class="empty-sub">Importá tu Excel de Oracle en la sección Stock</div></div>`;return;}
+  if(!data.length){body.innerHTML=`<div class="empty"><div class="empty-sub">Sin resultados para ese filtro</div></div>`;return;}
+
+  // Merge ventas
+  const v30 = getVentasPorSku();
+  body.innerHTML=`<table><thead><tr><th>Nombre comercial</th><th>SKU</th><th>Categoría</th><th>Stock Total</th><th>Disponible</th><th>Vtas 30d</th><th>Estado</th></tr></thead><tbody>${data.map(d=>{
+    const pct2=d.stockTotal>0?Math.min((d.stockDisp/d.stockTotal)*100,100):0;
+    const crit=d.stockDisp===0;
+    const bajo=d.minimo>0&&d.stockDisp<=d.minimo&&d.stockDisp>0;
+    const col=crit?'var(--warn)':bajo?'#f0c040':'var(--accent)';
+    const v=v30[d.sku]||0;
+    return `<tr><td><div class="prod-name">${d.nombre}</div></td><td><div class="prod-sku">${d.sku}</div></td><td><span class="badge badge-purple">${d.categ}</span></td><td>${(d.stockTotal||0).toLocaleString('es-AR')}</td><td><div class="stock-bar"><div class="bar-bg"><div class="bar-fill" style="width:${pct2}%;background:${col}"></div></div><span style="font-size:0.78rem;min-width:25px">${(d.stockDisp||0).toLocaleString('es-AR')}</span></div></td><td style="color:var(--accent2);font-weight:600">${v>0?v:'—'}</td><td><span class="badge ${crit?'badge-orange':bajo?'badge-orange':'badge-green'}">${crit?'⚠ Sin stock':bajo?'⚠ Bajo':'✓ OK'}</span></td></tr>`;
+  }).join('')}</tbody></table>`;
 }
 
-function calcPrice(p) {
-  const costo = parseFloat(p.costo) || 0;
-  const interes = parseFloat(p.tasa_interes) || 0;
-  const canal = parseFloat(p.comision_canal) || 0;
-  const cuotas = parseFloat(p.comision_cuotas) || 0;
-  const imp = parseFloat(p.impuestos) || 0;
-  const margen = parseFloat(p.margen_objetivo) || 0;
-
-  const totalPct = interes + canal + cuotas + imp + margen;
-  const precio = costo / (1 - totalPct / 100);
-  const mb = ((precio - costo) / precio) * 100;
-
-  return {
-    costo,
-    interes_monto: costo * interes / 100,
-    canal_monto: precio * canal / 100,
-    cuotas_monto: precio * cuotas / 100,
-    imp_monto: precio * imp / 100,
-    margen_monto: precio * margen / 100,
-    precio: precio,
-    mb: mb
-  };
-}
-
-function updatePreview() {
-  const p = {
-    costo: document.getElementById('f-costo').value,
-    tasa_interes: document.getElementById('f-interes').value,
-    comision_canal: document.getElementById('f-comision-canal').value,
-    comision_cuotas: document.getElementById('f-comision-cuotas').value,
-    impuestos: document.getElementById('f-impuestos').value,
-    margen_objetivo: document.getElementById('f-margen').value,
-  };
-  const c = calcPrice(p);
-  document.getElementById('prev-costo').textContent = fmt(c.costo);
-  document.getElementById('prev-interes').textContent = fmt(c.interes_monto);
-  document.getElementById('prev-canal').textContent = fmt(c.canal_monto);
-  document.getElementById('prev-cuotas').textContent = fmt(c.cuotas_monto);
-  document.getElementById('prev-impuestos').textContent = fmt(c.imp_monto);
-  document.getElementById('prev-margen').textContent = fmt(c.margen_monto);
-  document.getElementById('prev-total').textContent = fmt(c.precio);
-  document.getElementById('prev-mb').textContent = c.mb.toFixed(1) + '%';
-}
-
-function openModal(id = null) {
-  editingId = id;
-  document.getElementById('modal-title').textContent = id ? 'Editar producto' : 'Nuevo producto';
-  const fields = ['nombre','sku','categoria','costo','margen','interes','comision-canal','comision-cuotas','impuestos','stock-total','stock-disp','stock-min'];
-
-  if (id) {
-    const p = products.find(x => x.id === id);
-    document.getElementById('f-nombre').value = p.nombre || '';
-    document.getElementById('f-sku').value = p.sku || '';
-    document.getElementById('f-categoria').value = p.categoria || 'Accesorios';
-    document.getElementById('f-costo').value = p.costo || '';
-    document.getElementById('f-margen').value = p.margen_objetivo || '';
-    document.getElementById('f-interes').value = p.tasa_interes || '';
-    document.getElementById('f-comision-canal').value = p.comision_canal || '';
-    document.getElementById('f-comision-cuotas').value = p.comision_cuotas || '';
-    document.getElementById('f-impuestos').value = p.impuestos || '';
-    document.getElementById('f-stock-total').value = p.stock_total || '';
-    document.getElementById('f-stock-disp').value = p.stock_disponible || '';
-    document.getElementById('f-stock-min').value = p.stock_minimo || '';
-  } else {
-    fields.forEach(f => { try { document.getElementById('f-'+f).value = ''; } catch(e){} });
-  }
-
-  updatePreview();
-  document.getElementById('modal').classList.add('open');
-}
-
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-  editingId = null;
-}
-
-function closeModalOutside(e) {
-  if (e.target === document.getElementById('modal')) closeModal();
-}
-
-function saveProduct() {
-  const nombre = document.getElementById('f-nombre').value.trim();
-  if (!nombre) { showToast('El nombre es obligatorio'); return; }
-
-  const product = {
-    id: editingId || Date.now().toString(),
-    nombre,
-    sku: document.getElementById('f-sku').value.trim(),
-    categoria: document.getElementById('f-categoria').value,
-    costo: parseFloat(document.getElementById('f-costo').value) || 0,
-    margen_objetivo: parseFloat(document.getElementById('f-margen').value) || 0,
-    tasa_interes: parseFloat(document.getElementById('f-interes').value) || 0,
-    comision_canal: parseFloat(document.getElementById('f-comision-canal').value) || 0,
-    comision_cuotas: parseFloat(document.getElementById('f-comision-cuotas').value) || 0,
-    impuestos: parseFloat(document.getElementById('f-impuestos').value) || 0,
-    stock_total: parseInt(document.getElementById('f-stock-total').value) || 0,
-    stock_disponible: parseInt(document.getElementById('f-stock-disp').value) || 0,
-    stock_minimo: parseInt(document.getElementById('f-stock-min').value) || 0,
-    created: new Date().toISOString(),
-  };
-
-  if (editingId) {
-    const idx = products.findIndex(x => x.id === editingId);
-    products[idx] = product;
-    showToast('Producto actualizado ✓');
-  } else {
-    products.push(product);
-    showToast('Producto agregado ✓');
-  }
-
-  localStorage.setItem('nexstock_products', JSON.stringify(products));
-  closeModal();
-  renderDashboard();
-  renderProducts();
-}
-
-function deleteProduct(id) {
-  if (!confirm('¿Eliminar este producto?')) return;
-  products = products.filter(x => x.id !== id);
-  localStorage.setItem('nexstock_products', JSON.stringify(products));
-  renderDashboard();
-  renderProducts();
-  showToast('Producto eliminado');
-}
-
-function renderDashboard() {
-  const total = products.length;
-  const stockTotal = products.reduce((s, p) => s + (p.stock_total || 0), 0);
-  const stockDisp = products.reduce((s, p) => s + (p.stock_disponible || 0), 0);
-  const critical = products.filter(p => (p.stock_disponible || 0) <= (p.stock_minimo || 0)).length;
-  const avgMargin = total ? products.reduce((s, p) => {
-    const c = calcPrice(p); return s + c.mb;
-  }, 0) / total : 0;
-  const valorInv = products.reduce((s, p) => s + (p.costo || 0) * (p.stock_total || 0), 0);
-
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-stock').textContent = stockTotal.toLocaleString('es-AR');
-  document.getElementById('stat-available').textContent = stockDisp.toLocaleString('es-AR');
-  document.getElementById('stat-critical').textContent = critical;
-  document.getElementById('stat-margin').textContent = avgMargin.toFixed(1) + '%';
-  document.getElementById('stat-value').textContent = fmt(valorInv);
-
-  const wrap = document.getElementById('dashboard-table-wrap');
-  if (!products.length) {
-    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin productos aún</div><div class="empty-sub">Agregá tu primer producto para ver el dashboard</div><button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button></div>`;
-    return;
-  }
-
-  wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>Producto</th><th>Categoría</th><th>Precio sugerido</th><th>Margen</th><th>Stock disp.</th><th>Estado</th>
-    </tr></thead>
-    <tbody>${products.map(p => {
-      const c = calcPrice(p);
-      const isCritical = (p.stock_disponible || 0) <= (p.stock_minimo || 0);
-      const mbClass = c.mb >= 25 ? 'badge-ok' : c.mb >= 15 ? 'badge-mid' : 'badge-warn';
-      return `<tr>
-        <td><div class="product-name">${p.nombre}</div><div class="product-sku">${p.sku || '—'}</div></td>
-        <td><span class="badge badge-mid">${p.categoria}</span></td>
-        <td style="font-weight:600;color:var(--accent)">${fmt(c.precio)}</td>
-        <td>
-          <div class="margin-bar">
-            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(c.mb,60)/60*100}%"></div></div>
-            <span class="badge ${mbClass}">${c.mb.toFixed(1)}%</span>
-          </div>
-        </td>
-        <td>${(p.stock_disponible||0).toLocaleString('es-AR')}</td>
-        <td><span class="badge ${isCritical ? 'badge-warn' : 'badge-ok'}">${isCritical ? '⚠ Crítico' : '✓ OK'}</span></td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-}
-
-function renderProducts() {
-  const wrap = document.getElementById('products-table-wrap');
-  if (!products.length) {
-    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin productos</div><div class="empty-sub">Agregá productos o importá desde Excel</div><button class="btn btn-primary" onclick="openModal()">+ Agregar producto</button></div>`;
-    return;
-  }
-
-  wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>Producto</th><th>Costo</th><th>Precio sugerido</th><th>MB%</th><th>Stock total</th><th>Stock disp.</th><th>Mín.</th><th>Acciones</th>
-    </tr></thead>
-    <tbody>${products.map(p => {
-      const c = calcPrice(p);
-      const isCritical = (p.stock_disponible || 0) <= (p.stock_minimo || 0);
-      const mbClass = c.mb >= 25 ? 'badge-ok' : c.mb >= 15 ? 'badge-mid' : 'badge-warn';
-      return `<tr>
-        <td><div class="product-name">${p.nombre}</div><div class="product-sku">${p.sku || '—'} · ${p.categoria}</div></td>
-        <td>${fmt(p.costo)}</td>
-        <td style="color:var(--accent);font-weight:600">${fmt(c.precio)}</td>
-        <td><span class="badge ${mbClass}">${c.mb.toFixed(1)}%</span></td>
-        <td>${(p.stock_total||0).toLocaleString('es-AR')}</td>
-        <td><span class="${isCritical ? 'badge badge-warn' : ''}">${(p.stock_disponible||0).toLocaleString('es-AR')}</span></td>
-        <td>${p.stock_minimo||0}</td>
-        <td><div class="actions-cell">
-          <button class="icon-btn" onclick="openModal('${p.id}')">✏️</button>
-          <button class="icon-btn del" onclick="deleteProduct('${p.id}')">🗑️</button>
-        </div></td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-}
-
-function exportExcel() {
-  if (!products.length) { showToast('No hay productos para exportar'); return; }
-  const data = products.map(p => {
-    const c = calcPrice(p);
-    return {
-      'Nombre': p.nombre,
-      'SKU': p.sku,
-      'Categoría': p.categoria,
-      'Costo': p.costo,
-      'Precio sugerido': Math.round(c.precio),
-      'Margen bruto %': Math.round(c.mb * 10) / 10,
-      'Stock total': p.stock_total,
-      'Stock disponible': p.stock_disponible,
-      'Stock mínimo': p.stock_minimo,
-      'Tasa interés %': p.tasa_interes,
-      'Comisión canal %': p.comision_canal,
-      'Comisión cuotas %': p.comision_cuotas,
-      'Impuestos %': p.impuestos,
-      'Margen objetivo %': p.margen_objetivo,
-    };
+function getMerged() {
+  return stockData.map(s=>{
+    const cat=catalogo.find(c=>c.sku===s.sku);
+    return {...s,nombre:cat?.nombre||s.descripcion||s.sku,categ:cat?.categ||'—',minimo:cat?.minimo||0};
   });
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Nexstock');
-  XLSX.writeFile(wb, 'nexstock_export.xlsx');
-  showToast('Exportado correctamente ✓');
 }
 
-function downloadTemplate() {
-  const template = [{
-    nombre: 'Auricular BT500', sku: 'MOT-BT500', categoria: 'Auriculares',
-    costo: 5000, stock_total: 100, stock_disponible: 80, stock_minimo: 10,
-    tasa_interes: 5, comision_canal: 12, comision_cuotas: 8, impuestos: 21, margen_objetivo: 30
-  }];
-  const ws = XLSX.utils.json_to_sheet(template);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
-  XLSX.writeFile(wb, 'nexstock_plantilla.xlsx');
-  showToast('Plantilla descargada ✓');
+function getVentas30() {
+  const hoy=new Date(); const hace30=new Date(hoy-30*864e5);
+  return ventasData.filter(v=>{
+    const f=excelDateToJS(v.fecha);
+    return f>=hace30&&f<=hoy;
+  }).reduce((s,v)=>s+(v.cantidad||0),0);
 }
 
-function handleFileImport(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws);
-      let imported = 0;
-      rows.forEach(row => {
-        const nombre = row.nombre || row.Nombre || row.NOMBRE;
-        if (!nombre) return;
-        const product = {
-          id: Date.now().toString() + Math.random(),
-          nombre: nombre,
-          sku: row.sku || row.SKU || '',
-          categoria: row.categoria || row.Categoría || 'Accesorios',
-          costo: parseFloat(row.costo || row.Costo || 0),
-          margen_objetivo: parseFloat(row.margen_objetivo || 0),
-          tasa_interes: parseFloat(row.tasa_interes || 0),
-          comision_canal: parseFloat(row.comision_canal || 0),
-          comision_cuotas: parseFloat(row.comision_cuotas || 0),
-          impuestos: parseFloat(row.impuestos || 0),
-          stock_total: parseInt(row.stock_total || 0),
-          stock_disponible: parseInt(row.stock_disponible || 0),
-          stock_minimo: parseInt(row.stock_minimo || 0),
-          created: new Date().toISOString(),
-        };
-        products.push(product);
-        imported++;
-      });
-      localStorage.setItem('nexstock_products', JSON.stringify(products));
-      showToast(`${imported} productos importados ✓`);
-      renderDashboard();
-      renderProducts();
-    } catch(err) {
-      showToast('Error al leer el archivo');
-    }
+function getVentasPorSku() {
+  const hoy=new Date(); const hace30=new Date(hoy-30*864e5);
+  const res={};
+  ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=hace30&&f<=hoy;}).forEach(v=>{
+    res[v.sku]=(res[v.sku]||0)+(v.cantidad||0);
+  });
+  return res;
+}
+
+function excelDateToJS(serial) {
+  if(!serial) return new Date(0);
+  if(typeof serial==='string'&&serial.includes('/')) return new Date(serial.split('/').reverse().join('-'));
+  const d=new Date((serial-25569)*86400*1000);
+  return d;
+}
+
+// ===== CATÁLOGO =====
+function openCatModal(id=null) {
+  editCatId=id;
+  document.getElementById('cat-title').textContent=id?'Editar producto':'Nuevo producto';
+  if(id){const p=catalogo.find(c=>c.id===id);document.getElementById('c-sku').value=p.sku||'';document.getElementById('c-ean').value=p.ean||'';document.getElementById('c-nombre').value=p.nombre||'';document.getElementById('c-desc').value=p.desc||'';document.getElementById('c-categ').value=p.categ||'Auriculares';document.getElementById('c-min').value=p.minimo||'';}
+  else{['c-sku','c-ean','c-nombre','c-desc','c-min'].forEach(f=>document.getElementById(f).value='');document.getElementById('c-categ').value='Auriculares';}
+  document.getElementById('modal-cat').classList.add('open');
+}
+
+function saveCat() {
+  const sku=document.getElementById('c-sku').value.trim();
+  const nombre=document.getElementById('c-nombre').value.trim();
+  if(!sku||!nombre){toast('SKU y nombre son obligatorios');return;}
+  const prod={id:editCatId||Date.now().toString(),sku,nombre,ean:document.getElementById('c-ean').value.trim(),desc:document.getElementById('c-desc').value.trim(),categ:document.getElementById('c-categ').value,minimo:parseInt(document.getElementById('c-min').value)||0};
+  if(editCatId){catalogo[catalogo.findIndex(c=>c.id===editCatId)]=prod;toast('Actualizado ✓');}
+  else{if(catalogo.find(c=>c.sku===sku)){toast('Ya existe ese SKU');return;}catalogo.push(prod);toast('Producto agregado ✓');}
+  save('nx_cat',catalogo);closeModal('modal-cat');renderCat();renderPricingSelects();renderDash();
+}
+
+function deleteCat(id){if(!confirm('¿Eliminar?'))return;catalogo=catalogo.filter(c=>c.id!==id);save('nx_cat',catalogo);renderCat();renderPricingSelects();renderDash();toast('Eliminado');}
+
+function renderCat(filter='') {
+  let data=catalogo;
+  if(filter) data=data.filter(c=>c.nombre.toLowerCase().includes(filter.toLowerCase())||c.sku.toLowerCase().includes(filter.toLowerCase()));
+  const body=document.getElementById('cat-body');
+  if(!catalogo.length){body.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Catálogo vacío</div><div class="empty-sub">Cargá tus productos</div><button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Agregar</button></div>`;return;}
+  if(!data.length){body.innerHTML=`<div class="empty"><div class="empty-sub">Sin resultados</div></div>`;return;}
+  body.innerHTML=`<table><thead><tr><th>SKU Oracle</th><th>Nombre comercial</th><th>EAN</th><th>Categoría</th><th>Stock mín.</th><th></th></tr></thead><tbody>${data.map(p=>`<tr><td><div class="prod-sku" style="font-size:0.78rem">${p.sku}</div></td><td><div class="prod-name">${p.nombre}</div>${p.desc?`<div class="prod-sku">${p.desc}</div>`:''}</td><td><div class="prod-sku">${p.ean||'—'}</div></td><td><span class="badge badge-purple">${p.categ}</span></td><td>${p.minimo||'—'}</td><td><div class="actions-cell"><button class="icon-btn" onclick="openCatModal('${p.id}')">✏️</button><button class="icon-btn del" onclick="deleteCat('${p.id}')">🗑️</button></div></td></tr>`).join('')}</tbody></table>`;
+}
+
+function exportCat(){if(!catalogo.length){toast('No hay productos');return;}const ws=XLSX.utils.json_to_sheet(catalogo.map(p=>({SKU:p.sku,'Nombre':p.nombre,EAN:p.ean,Categoría:p.categ})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Catálogo');XLSX.writeFile(wb,'nexstock_catalogo.xlsx');toast('Exportado ✓');}
+
+// ===== PRICING =====
+function renderPricingSelects() {
+  const sel=document.getElementById('p-prod');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Seleccioná —</option>'+catalogo.map(p=>`<option value="${p.sku}" ${p.sku===cur?'selected':''}>${p.nombre} (${p.sku})</option>`).join('');
+  const mp=document.getElementById('p-mp');
+  const curMp=mp.value;
+  mp.innerHTML='<option value="">— Seleccioná —</option>'+marketplaces.map(m=>`<option value="${m}" ${m===curMp?'selected':''}>${m}</option>`).join('');
+}
+
+function onProdSelect() {
+  const sku=document.getElementById('p-prod').value;
+  if(!sku) return;
+  const costo=costosBase[sku];
+  if(costo){document.getElementById('p-costo').value=Math.round(costo);toast('Costo cargado desde base ✓');}
+  calcPricing();
+}
+
+function onMpChange() {
+  const mp=document.getElementById('p-mp').value;
+  const cuotas=document.getElementById('p-cuotas').value;
+  if(mp&&cuotas) autoFillComision(mp,cuotas);
+  calcPricing();
+}
+
+function onCuotasChange() {
+  const mp=document.getElementById('p-mp').value;
+  const cuotas=document.getElementById('p-cuotas').value;
+  if(mp&&cuotas) autoFillComision(mp,cuotas);
+  calcPricing();
+}
+
+function autoFillComision(mp,cuotas) {
+  const key=mp+'|'+cuotas;
+  const com=comisiones[key];
+  if(com!==undefined){document.getElementById('p-comcuotas').value=com;toast('Comisión cargada automáticamente ✓');}
+  // Comision base del marketplace (1 cuota)
+  const base=comisiones[mp+'|1'];
+  if(base!==undefined) document.getElementById('p-comcanal').value=base;
+}
+
+function renderImpuestos() {
+  const list=document.getElementById('impuestos-list');
+  if(!impuestos.length){list.innerHTML=`<p style="color:var(--muted);font-size:0.8rem">No hay impuestos configurados. Hacé click en "+ Agregar impuesto".</p>`;return;}
+  list.innerHTML=impuestos.map((imp,i)=>`
+    <div class="impuesto-row">
+      <input type="text" value="${imp.nombre}" placeholder="Nombre (ej: IVA)" onchange="impuestos[${i}].nombre=this.value;calcPricing()">
+      <input type="number" value="${imp.pct}" placeholder="%" style="width:80px" onchange="impuestos[${i}].pct=parseFloat(this.value)||0;calcPricing()">
+      <span style="color:var(--muted);font-size:0.8rem">%</span>
+      <button class="rm-imp-btn" onclick="removeImpuesto(${i})">✕</button>
+    </div>`).join('');
+  calcPricing();
+}
+
+function addImpuesto(){impuestos.push({nombre:'',pct:0});save('nx_impuestos',impuestos);renderImpuestos();}
+function removeImpuesto(i){impuestos.splice(i,1);save('nx_impuestos',impuestos);renderImpuestos();}
+
+function calcPricing() {
+  save('nx_impuestos',impuestos);
+  const costo=parseFloat(document.getElementById('p-costo').value)||0;
+  const margen=parseFloat(document.getElementById('p-margen').value)||0;
+  const tasa=parseFloat(document.getElementById('p-tasa').value)||0;
+  const plazo=parseFloat(document.getElementById('p-plazo').value)||0;
+  const comCanal=parseFloat(document.getElementById('p-comcanal').value)||0;
+  const comCuotas=parseFloat(document.getElementById('p-comcuotas').value)||0;
+
+  // Interés = tasa anual * (plazo/365)
+  const interesCalc = tasa * (plazo/365);
+  document.getElementById('p-interes-calc').value = Math.round(interesCalc*100)/100;
+
+  const totalImpPct=impuestos.reduce((s,i)=>s+(parseFloat(i.pct)||0),0);
+  const totalPct=interesCalc+comCanal+comCuotas+totalImpPct+margen;
+  const precio=totalPct<100?costo/(1-totalPct/100):0;
+  const ganancia=precio-costo;
+  const mb=precio>0?(ganancia/precio)*100:0;
+
+  document.getElementById('r-costo').textContent=fmt(costo);
+  document.getElementById('r-interes').textContent=fmt(costo*interesCalc/100);
+  document.getElementById('r-canal').textContent=fmt(precio*comCanal/100);
+  document.getElementById('r-cuotas').textContent=fmt(precio*comCuotas/100);
+  document.getElementById('r-margen').textContent=fmt(precio*margen/100);
+  document.getElementById('r-total').textContent=fmt(precio);
+  document.getElementById('r-mb').textContent=pct(mb);
+  document.getElementById('r-gan').textContent=fmt(ganancia);
+
+  // Impuestos rows
+  const impRows=document.getElementById('r-impuestos-rows');
+  impRows.innerHTML=impuestos.map(i=>`<div class="calc-row"><span>+ ${i.nombre||'Impuesto'} (${i.pct}%)</span><span>${fmt(precio*(i.pct||0)/100)}</span></div>`).join('');
+}
+
+function guardarPricing() {
+  const sku=document.getElementById('p-prod').value;
+  const costo=parseFloat(document.getElementById('p-costo').value)||0;
+  if(!sku){toast('Seleccioná un producto');return;}
+  if(!costo){toast('Ingresá el costo');return;}
+  const cat=catalogo.find(c=>c.sku===sku);
+  const tasa=parseFloat(document.getElementById('p-tasa').value)||0;
+  const plazo=parseFloat(document.getElementById('p-plazo').value)||0;
+  const interesCalc=tasa*(plazo/365);
+  const margen=parseFloat(document.getElementById('p-margen').value)||0;
+  const comCanal=parseFloat(document.getElementById('p-comcanal').value)||0;
+  const comCuotas=parseFloat(document.getElementById('p-comcuotas').value)||0;
+  const totalImpPct=impuestos.reduce((s,i)=>s+(parseFloat(i.pct)||0),0);
+  const totalPct=interesCalc+comCanal+comCuotas+totalImpPct+margen;
+  const precio=totalPct<100?costo/(1-totalPct/100):0;
+  const mb=precio>0?((precio-costo)/precio*100):0;
+  const entry={sku,nombre:cat?.nombre||sku,costo,margen,comCanal,comCuotas,interesCalc:Math.round(interesCalc*100)/100,impuestos:[...impuestos],mp:document.getElementById('p-mp').value,cuotas:document.getElementById('p-cuotas').value,precio:Math.round(precio),mb:Math.round(mb*10)/10,fecha:new Date().toLocaleDateString('es-AR')};
+  const idx=pricingData.findIndex(p=>p.sku===sku);
+  if(idx>=0) pricingData[idx]=entry; else pricingData.push(entry);
+  save('nx_pricing',pricingData);renderPricingTable();toast('Precio guardado ✓');
+}
+
+function renderPricingTable() {
+  const body=document.getElementById('pricing-saved');
+  if(!pricingData.length){body.innerHTML=`<div class="empty" style="padding:1.5rem"><div class="empty-sub">Guardá precios para verlos acá</div></div>`;return;}
+  body.innerHTML=`<table><thead><tr><th>Producto</th><th>Costo</th><th>Precio</th><th>Margen</th><th>Canal</th><th>Cuotas</th><th>Fecha</th><th></th></tr></thead><tbody>${pricingData.map(p=>`<tr><td><div class="prod-name">${p.nombre}</div><div class="prod-sku">${p.sku}</div></td><td>${fmt(p.costo)}</td><td style="color:var(--accent);font-weight:700">${fmt(p.precio)}</td><td><span class="badge ${p.mb>=25?'badge-green':p.mb>=15?'badge-purple':'badge-orange'}">${p.mb}%</span></td><td style="font-size:0.75rem">${p.mp||'—'}</td><td style="font-size:0.75rem">${p.cuotas?p.cuotas+'c':'—'}</td><td style="color:var(--muted);font-size:0.72rem">${p.fecha}</td><td><button class="icon-btn del" onclick="deletePricing('${p.sku}')">🗑️</button></td></tr>`).join('')}</tbody></table>`;
+}
+
+function deletePricing(sku){pricingData=pricingData.filter(p=>p.sku!==sku);save('nx_pricing',pricingData);renderPricingTable();toast('Eliminado');}
+function exportPricing(){if(!pricingData.length){toast('Sin datos');return;}const ws=XLSX.utils.json_to_sheet(pricingData.map(p=>({SKU:p.sku,Producto:p.nombre,Costo:p.costo,'Precio sugerido':p.precio,'Margen %':p.mb,Marketplace:p.mp,Cuotas:p.cuotas,Fecha:p.fecha})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Pricing');XLSX.writeFile(wb,'nexstock_pricing.xlsx');toast('Exportado ✓');}
+
+// ===== STOCK =====
+function importStock(event) {
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      stockData=[];
+      for(let i=2;i<rows.length;i++){
+        const row=rows[i];if(!row||!row[1])continue;
+        stockData.push({sku:String(row[1]||'').trim(),descripcion:String(row[2]||'').trim(),stockTotal:parseInt(row[3])||0,stockDisp:parseInt(row[4])||0,marca:String(row[8]||'').trim()});
+      }
+      save('nx_stock',stockData);
+      const fecha=new Date().toLocaleDateString('es-AR');
+      localStorage.setItem('nx_ultima',fecha);
+      document.getElementById('st-ultima').textContent=fecha;
+      toast(`${stockData.length} productos importados ✓`);
+      renderDash();
+    }catch(err){toast('Error al leer el archivo');console.error(err);}
   };
-  reader.readAsArrayBuffer(file);
-  event.target.value = '';
+  reader.readAsArrayBuffer(file);event.target.value='';
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(() => { t.style.display = 'none'; }, 3000);
+// ===== VENTAS =====
+function importVentas(event) {
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      ventasData=[];
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i];if(!row||!row[0])continue;
+        const cantidad=parseFloat(row[44])||0; // columna AS = index 44
+        if(!row[18])continue; // SKU columna S = index 18
+        ventasData.push({fecha:row[0],negocio:String(row[11]||'').trim(),sku:String(row[18]||'').trim(),cantidad});
+      }
+      save('nx_ventas',ventasData);
+      toast(`${ventasData.length} registros de ventas importados ✓`);
+      renderVentas();renderDash();
+    }catch(err){toast('Error al leer ventas');console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);event.target.value='';
 }
 
-// Initial render
-renderDashboard();
-renderProducts();
+function renderVentas(filter='') {
+  const hoy=new Date();const hace30=new Date(hoy-30*864e5);
+  let data=ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=hace30&&f<=hoy;});
+  if(ventasFiltroNeg) data=data.filter(v=>v.negocio===ventasFiltroNeg);
+
+  // Agrupar por SKU
+  const agrup={};
+  data.forEach(v=>{
+    if(!agrup[v.sku]) agrup[v.sku]={sku:v.sku,cantidad:0,negocio:v.negocio};
+    agrup[v.sku].cantidad+=v.cantidad;
+  });
+  let rows=Object.values(agrup).sort((a,b)=>b.cantidad-a.cantidad);
+  if(filter) rows=rows.filter(r=>r.sku.toLowerCase().includes(filter.toLowerCase()));
+
+  // Negocio filter options
+  const negs=[...new Set(ventasData.map(v=>v.negocio).filter(Boolean))];
+  const negSel=document.getElementById('ventas-neg-filter');
+  negSel.innerHTML='<option value="">Todos los negocios</option>'+negs.map(n=>`<option value="${n}" ${n===ventasFiltroNeg?'selected':''}>${n}</option>`).join('');
+
+  const body=document.getElementById('ventas-body');
+  if(!ventasData.length){body.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Sin datos de ventas</div><div class="empty-sub">Importá tu Excel de ventas</div></div>`;return;}
+  if(!rows.length){body.innerHTML=`<div class="empty"><div class="empty-sub">Sin ventas en los últimos 30 días para ese filtro</div></div>`;return;}
+
+  body.innerHTML=`<table><thead><tr><th>SKU</th><th>Nombre comercial</th><th>Unidades vendidas (30d)</th></tr></thead><tbody>${rows.map(r=>{
+    const cat=catalogo.find(c=>c.sku===r.sku);
+    return `<tr><td><div class="prod-sku" style="font-size:0.78rem">${r.sku}</div></td><td><div class="prod-name">${cat?.nombre||'—'}</div></td><td style="color:var(--accent2);font-weight:700;font-size:0.95rem">${r.cantidad.toLocaleString('es-AR')}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function exportVentas(){
+  const hoy=new Date();const hace30=new Date(hoy-30*864e5);
+  const data=ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=hace30&&f<=hoy;});
+  const agrup={};data.forEach(v=>{if(!agrup[v.sku]){agrup[v.sku]={SKU:v.sku,Cantidad:0};}agrup[v.sku].Cantidad+=v.cantidad;});
+  const ws=XLSX.utils.json_to_sheet(Object.values(agrup));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ventas');XLSX.writeFile(wb,'nexstock_ventas30d.xlsx');toast('Exportado ✓');
+}
+
+// ===== COMPRAS =====
+function openOCModal(){
+  document.getElementById('oc-nro').value='';
+  document.getElementById('oc-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('oc-obs').value='';
+  document.getElementById('oc-items').innerHTML='';
+  addOCItem();
+  document.getElementById('modal-oc').classList.add('open');
+}
+
+function addOCItem(){
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center';
+  div.innerHTML=`<input type="text" placeholder="SKU" style="flex:2"><input type="number" placeholder="Cantidad" style="flex:1"><button class="rm-imp-btn" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('oc-items').appendChild(div);
+}
+
+function saveOC(){
+  const nro=document.getElementById('oc-nro').value.trim();
+  if(!nro){toast('Ingresá el número de OC');return;}
+  const items=[];
+  document.getElementById('oc-items').querySelectorAll('div').forEach(row=>{
+    const inputs=row.querySelectorAll('input');
+    const sku=inputs[0]?.value?.trim();
+    const qty=parseInt(inputs[1]?.value)||0;
+    if(sku&&qty) items.push({sku,cantidad:qty});
+  });
+  if(!items.length){toast('Agregá al menos un SKU');return;}
+  const oc={id:Date.now().toString(),nro,fecha:document.getElementById('oc-fecha').value,obs:document.getElementById('oc-obs').value,items};
+  comprasData.unshift(oc);
+  save('nx_compras',comprasData);
+  closeModal('modal-oc');renderCompras();toast('OC guardada ✓');
+}
+
+function deleteOC(id){if(!confirm('¿Eliminar esta OC?'))return;comprasData=comprasData.filter(c=>c.id!==id);save('nx_compras',comprasData);renderCompras();toast('Eliminado');}
+
+function renderCompras(filter=''){
+  let data=comprasData;
+  if(filter) data=data.filter(c=>c.nro.toLowerCase().includes(filter.toLowerCase())||c.items.some(i=>i.sku.toLowerCase().includes(filter.toLowerCase())));
+  const body=document.getElementById('compras-body');
+  if(!comprasData.length){body.innerHTML=`<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Sin órdenes de compra</div><div class="empty-sub">Registrá tus OCs</div><button class="btn btn-primary btn-sm" onclick="openOCModal()">+ Nueva OC</button></div>`;return;}
+  if(!data.length){body.innerHTML=`<div class="empty"><div class="empty-sub">Sin resultados</div></div>`;return;}
+  body.innerHTML=`<table><thead><tr><th>Nro. OC</th><th>Fecha</th><th>SKUs</th><th>Unidades totales</th><th>Observaciones</th><th></th></tr></thead><tbody>${data.map(oc=>`<tr><td style="font-weight:700">${oc.nro}</td><td style="color:var(--muted);font-size:0.78rem">${oc.fecha}</td><td><div style="font-size:0.75rem;color:var(--muted)">${oc.items.map(i=>`${i.sku} (${i.cantidad})`).join(', ')}</div></td><td style="color:var(--accent);font-weight:700">${oc.items.reduce((s,i)=>s+i.cantidad,0).toLocaleString('es-AR')}</td><td style="font-size:0.78rem;color:var(--muted)">${oc.obs||'—'}</td><td><button class="icon-btn del" onclick="deleteOC('${oc.id}')">🗑️</button></td></tr>`).join('')}</tbody></table>`;
+}
+
+// ===== CONFIG =====
+function addMarketplace(){const n=prompt('Nombre del marketplace:');if(n&&n.trim()){marketplaces.push(n.trim());save('nx_mp',marketplaces);renderConfigMp();renderComisionesTable();renderPricingSelects();toast('Marketplace agregado ✓');}}
+function deleteMP(i){if(!confirm('¿Eliminar?'))return;marketplaces.splice(i,1);save('nx_mp',marketplaces);renderConfigMp();renderComisionesTable();renderPricingSelects();}
+
+function renderConfigMp(){
+  const el=document.getElementById('mp-list');
+  el.innerHTML=marketplaces.map((m,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span style="font-size:0.85rem;font-weight:600">${m}</span><button class="icon-btn del" onclick="deleteMP(${i})">🗑️</button></div>`).join('');
+}
+
+function renderComisionesTable(){
+  const el=document.getElementById('comisiones-table');
+  if(!marketplaces.length){el.innerHTML=`<p style="color:var(--muted);font-size:0.8rem">Agregá marketplaces primero.</p>`;return;}
+  el.innerHTML=`<table class="comision-table"><thead><tr><th>Marketplace</th>${CUOTAS.map(c=>`<th>${c}c</th>`).join('')}</tr></thead><tbody>${marketplaces.map(mp=>`<tr><td>${mp}</td>${CUOTAS.map(c=>{const key=mp+'|'+c;const val=comisiones[key]||'';return `<td><input type="number" value="${val}" placeholder="0" data-key="${key}" onchange="comisiones[this.dataset.key]=parseFloat(this.value)||0"></td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+function saveComisiones(){save('nx_comisiones',comisiones);toast('Comisiones guardadas ✓');}
+
+function importCostos(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      costosBase={};let count=0;
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i];if(!row||!row[0])continue;
+        const subelemento=String(row[6]||'').trim();
+        if(subelemento==='(TODOS)'){
+          const sku=String(row[0]).trim();
+          const costo=parseFloat(row[7])||0;
+          if(sku&&costo){costosBase[sku]=costo;count++;}
+        }
+      }
+      save('nx_costos',costosBase);
+      document.getElementById('costos-status').textContent=`✓ ${count} SKUs cargados en la base de costos`;
+      toast(`${count} costos importados ✓`);
+    }catch(err){toast('Error al leer costos');console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);event.target.value='';
+}
+
+// ===== UTILS =====
+function save(key,data){localStorage.setItem(key,JSON.stringify(data));}
+function closeModal(id){document.getElementById(id).classList.remove('open');editCatId=null;}
+function closeOut(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
 </script>
 </body>
 </html>
