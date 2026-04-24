@@ -161,6 +161,21 @@ input[type=number]::-webkit-inner-spin-button { opacity:1; }
     <div class="stat-card"><div class="stat-label">Ventas 30 días</div><div class="stat-val purple" id="st-ventas30">0</div><div class="stat-sub">unidades vendidas</div></div>
     <div class="stat-card"><div class="stat-label">Última importación</div><div class="stat-val" style="font-size:0.9rem;padding-top:0.4rem" id="st-ultima">—</div></div>
   </div>
+  <!-- PRODUCTOS ESTRELLA -->
+  <div class="table-wrap" style="margin-bottom:1.2rem;padding:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem">
+      <div>
+        <div style="font-size:0.95rem;font-weight:800">⭐ Productos estrella</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:0.15rem">Seleccioná los productos que querés monitorear</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="openEstrellasModal()">Gestionar</button>
+    </div>
+    <div id="estrella-charts-wrap">
+      <div class="empty" style="padding:1.5rem"><div class="empty-sub">Seleccioná productos estrella y cargá datos de ventas para ver los gráficos</div></div>
+    </div>
+  </div>
+
+  <!-- TABLA STOCK -->
   <div class="table-wrap">
     <div class="table-toolbar">
       <div class="toolbar-left">
@@ -186,7 +201,11 @@ input[type=number]::-webkit-inner-spin-button { opacity:1; }
   <div class="table-wrap">
     <div class="table-toolbar">
       <div class="toolbar-left"><input class="search-input" placeholder="🔍 Buscar..." oninput="renderCat(this.value)"></div>
-      <div class="toolbar-right"><button class="btn btn-secondary btn-sm" onclick="exportCat()">↓ Exportar</button></div>
+      <div class="toolbar-right">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('file-cat').click()">↑ Importar Excel</button>
+        <input type="file" id="file-cat" accept=".xlsx,.xls" style="display:none" onchange="importCatalogo(event)">
+        <button class="btn btn-secondary btn-sm" onclick="exportCat()">↓ Exportar</button>
+      </div>
     </div>
     <div id="cat-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Catálogo vacío</div><div class="empty-sub">Cargá tus productos con SKU, nombre comercial y EAN</div><button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Agregar</button></div></div>
   </div>
@@ -450,6 +469,20 @@ input[type=number]::-webkit-inner-spin-button { opacity:1; }
   </div>
 </div>
 
+<!-- MODAL ESTRELLA -->
+<div class="modal-overlay" id="modal-estrellas" onclick="closeOut(event,'modal-estrellas')">
+  <div class="modal modal-lg">
+    <div class="modal-title">⭐ Productos estrella</div>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">Seleccioná los productos que querés monitorear en el dashboard. Aparecerán en los gráficos de torta y cobertura de stock.</p>
+    <input class="search-input" style="width:100%;margin-bottom:0.8rem" placeholder="🔍 Buscar producto..." oninput="filterEstrellasModal(this.value)" id="estrella-search">
+    <div id="estrella-modal-list" style="max-height:350px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-estrellas')">Cerrar</button>
+      <button class="btn btn-primary" onclick="saveEstrellas()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -464,6 +497,8 @@ let comisiones = JSON.parse(localStorage.getItem('nx_comisiones')||'{}');
 let pricingData = JSON.parse(localStorage.getItem('nx_pricing')||'[]');
 let impuestos = JSON.parse(localStorage.getItem('nx_impuestos')||'[{"nombre":"IVA","pct":21}]');
 let editCatId = null;
+let productosEstrella = JSON.parse(localStorage.getItem('nx_estrellas')||'[]');
+let estrellasSelTemp = [];
 let dashFilter = {search:'',categ:'',estado:''};
 let ventasFiltroNeg = '';
 const CUOTAS = [1,3,6,9,12,15,18,21];
@@ -474,6 +509,7 @@ const ultiImp = localStorage.getItem('nx_ultima');
 if(ultiImp) document.getElementById('st-ultima').textContent = ultiImp;
 renderDash(); renderCat(); renderPricingSelects(); renderImpuestos(); renderPricingTable();
 renderCompras(); renderConfigMp(); renderComisionesTable(); renderVentas();
+renderEstrellasCharts();
 
 function showView(name,btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -715,8 +751,9 @@ function importStock(event) {
       const wb=XLSX.read(e.target.result,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      // Encabezados filas 17-18, datos desde fila 19 (índice 18). Sobreescribe siempre.
       stockData=[];
-      for(let i=2;i<rows.length;i++){
+      for(let i=18;i<rows.length;i++){
         const row=rows[i];if(!row||!row[1])continue;
         stockData.push({sku:String(row[1]||'').trim(),descripcion:String(row[2]||'').trim(),stockTotal:parseInt(row[3])||0,stockDisp:parseInt(row[4])||0,marca:String(row[8]||'').trim()});
       }
@@ -724,7 +761,7 @@ function importStock(event) {
       const fecha=new Date().toLocaleDateString('es-AR');
       localStorage.setItem('nx_ultima',fecha);
       document.getElementById('st-ultima').textContent=fecha;
-      toast(`${stockData.length} productos importados ✓`);
+      toast(`${stockData.length} productos importados ✓ (stock actualizado)`);
       renderDash();
     }catch(err){toast('Error al leer el archivo');console.error(err);}
   };
@@ -877,6 +914,181 @@ function importCostos(event){
     }catch(err){toast('Error al leer costos');console.error(err);}
   };
   reader.readAsArrayBuffer(file);event.target.value='';
+}
+
+// ===== IMPORT CATALOGO =====
+function importCatalogo(event) {
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      let added=0, skipped=0;
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i];if(!row||!row[0])continue;
+        const sku=String(row[0]).trim();
+        const nombre=String(row[1]||'').trim();
+        if(!sku||!nombre)continue;
+        if(catalogo.find(c=>c.sku===sku)){skipped++;continue;}
+        catalogo.push({id:Date.now().toString()+i,sku,nombre,ean:'',desc:'',categ:'Accesorios',minimo:0});
+        added++;
+      }
+      save('nx_cat',catalogo);
+      renderCat();renderPricingSelects();renderDash();
+      toast(`${added} productos importados, ${skipped} ya existían ✓`);
+    }catch(err){toast('Error al importar catálogo');console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);event.target.value='';
+}
+
+// ===== PRODUCTOS ESTRELLA =====
+function openEstrellasModal() {
+  estrellasSelTemp = [...productosEstrella];
+  renderEstrellasModalList('');
+  document.getElementById('estrella-search').value='';
+  document.getElementById('modal-estrellas').classList.add('open');
+}
+
+function filterEstrellasModal(v) { renderEstrellasModalList(v); }
+
+function renderEstrellasModalList(filter) {
+  let prods = catalogo;
+  if(filter) prods = prods.filter(p=>p.nombre.toLowerCase().includes(filter.toLowerCase())||p.sku.toLowerCase().includes(filter.toLowerCase()));
+  const el = document.getElementById('estrella-modal-list');
+  if(!prods.length){el.innerHTML='<div class="empty" style="padding:1rem"><div class="empty-sub">Sin productos en catálogo</div></div>';return;}
+  el.innerHTML = prods.map(p=>{
+    const checked = estrellasSelTemp.includes(p.sku);
+    return `<label style="display:flex;align-items:center;gap:0.7rem;padding:0.55rem 0.3rem;border-bottom:1px solid var(--border);cursor:pointer">
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleEstrella('${p.sku}',this.checked)" style="width:16px;height:16px;accent-color:var(--accent)">
+      <div><div style="font-size:0.85rem;font-weight:600">${p.nombre}</div><div style="font-size:0.72rem;color:var(--muted)">${p.sku}</div></div>
+    </label>`;
+  }).join('');
+}
+
+function toggleEstrella(sku, checked) {
+  if(checked && !estrellasSelTemp.includes(sku)) estrellasSelTemp.push(sku);
+  else if(!checked) estrellasSelTemp = estrellasSelTemp.filter(s=>s!==sku);
+}
+
+function saveEstrellas() {
+  productosEstrella = [...estrellasSelTemp];
+  save('nx_estrellas', productosEstrella);
+  closeModal('modal-estrellas');
+  renderEstrellasCharts();
+  toast(`${productosEstrella.length} productos estrella guardados ✓`);
+}
+
+function renderEstrellasCharts() {
+  const wrap = document.getElementById('estrella-charts-wrap');
+  if(!productosEstrella.length || !ventasData.length) {
+    wrap.innerHTML='<div class="empty" style="padding:1.5rem"><div class="empty-sub">Seleccioná productos estrella y cargá datos de ventas para ver los gráficos</div></div>';
+    return;
+  }
+
+  const hoy=new Date(); const hace30=new Date(hoy-30*864e5);
+  const v30=ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=hace30&&f<=hoy;});
+
+  // Ventas por sku estrella (30d)
+  const ventasPorSku={};
+  productosEstrella.forEach(sku=>{ventasPorSku[sku]=0;});
+  v30.forEach(v=>{if(ventasPorSku.hasOwnProperty(v.sku)) ventasPorSku[v.sku]+=(v.cantidad||0);});
+
+  // Stock disponible por sku
+  const stockPorSku={};
+  productosEstrella.forEach(sku=>{
+    const s=stockData.find(d=>d.sku===sku);
+    stockPorSku[sku]=s?.stockDisp||0;
+  });
+
+  // Dias cobertura
+  const coberturas=productosEstrella.map(sku=>{
+    const cat=catalogo.find(c=>c.sku===sku);
+    const nombre=cat?.nombre||sku;
+    const vDiaria=ventasPorSku[sku]/30;
+    const stock=stockPorSku[sku];
+    const dias=vDiaria>0?Math.round(stock/vDiaria):stock>0?999:0;
+    return {sku,nombre,dias,stock,vMes:ventasPorSku[sku]};
+  }).sort((a,b)=>a.dias-b.dias);
+
+  const totalVentas=Object.values(ventasPorSku).reduce((s,v)=>s+v,0);
+
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+    <!-- COBERTURA -->
+    <div>
+      <div style="font-size:0.78rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">📉 Días de cobertura de stock</div>
+      ${coberturas.map(p=>{
+        const color=p.dias<=7?'var(--warn)':p.dias<=30?'#f0c040':'var(--accent)';
+        const label=p.dias===999?'Sin ventas':p.dias===0&&p.stock===0?'Sin stock':`${p.dias} días`;
+        const barPct=p.dias===999?100:Math.min((p.dias/60)*100,100);
+        return `<div style="margin-bottom:0.9rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">
+            <div style="font-size:0.8rem;font-weight:600">${p.nombre}</div>
+            <div style="font-size:0.78rem;font-weight:700;color:${color}">${label}</div>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${barPct}%;background:${color};border-radius:3px;transition:width 0.5s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:0.2rem;font-size:0.7rem;color:var(--muted)">
+            <span>Stock: ${p.stock.toLocaleString('es-AR')} u.</span>
+            <span>Venta 30d: ${p.vMes.toLocaleString('es-AR')} u.</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <!-- TORTA -->
+    <div>
+      <div style="font-size:0.78rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">🍩 Participación en ventas (30d)</div>
+      <canvas id="donut-canvas" width="260" height="260" style="display:block;margin:0 auto"></canvas>
+      <div id="donut-legend" style="margin-top:0.8rem"></div>
+    </div>
+  </div>`;
+
+  // Draw donut
+  drawDonut(coberturas, totalVentas);
+}
+
+function drawDonut(data, total) {
+  const canvas=document.getElementById('donut-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const cx=130,cy=130,r=100,inner=60;
+  const colors=['#00e5a0','#7b61ff','#ff6b35','#f0c040','#00bcd4','#e91e63','#8bc34a','#ff9800'];
+  ctx.clearRect(0,0,260,260);
+
+  if(total===0){
+    ctx.fillStyle='#2c2d3d';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#0b0c10';ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#6b6b88';ctx.font='12px Segoe UI';ctx.textAlign='center';ctx.fillText('Sin ventas',cx,cy);
+    return;
+  }
+
+  let start=-Math.PI/2;
+  const legend=[];
+  data.forEach((p,i)=>{
+    const slice=(p.vMes/total)*Math.PI*2;
+    const color=colors[i%colors.length];
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+slice);ctx.closePath();
+    ctx.fillStyle=color;ctx.fill();
+    start+=slice;
+    const pct=total>0?Math.round((p.vMes/total)*100):0;
+    legend.push({nombre:p.nombre,color,pct,vMes:p.vMes});
+  });
+
+  // Inner circle (donut hole)
+  ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);
+  ctx.fillStyle='#14151c';ctx.fill();
+  ctx.fillStyle='#e8e8f0';ctx.font='bold 18px Segoe UI';ctx.textAlign='center';ctx.fillText(total.toLocaleString('es-AR'),cx,cy-6);
+  ctx.fillStyle='#6b6b88';ctx.font='11px Segoe UI';ctx.fillText('unidades',cx,cy+12);
+
+  // Legend
+  const legEl=document.getElementById('donut-legend');
+  if(legEl) legEl.innerHTML=legend.map(l=>`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem">
+    <div style="width:10px;height:10px;border-radius:2px;background:${l.color};flex-shrink:0"></div>
+    <div style="font-size:0.75rem;flex:1">${l.nombre}</div>
+    <div style="font-size:0.75rem;font-weight:700;color:${l.color}">${l.pct}% (${l.vMes} u.)</div>
+  </div>`).join('');
 }
 
 // ===== UTILS =====
