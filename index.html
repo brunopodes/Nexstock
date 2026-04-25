@@ -196,7 +196,10 @@ input[type=number]::-webkit-inner-spin-button { opacity:1; }
 <div class="view" id="view-catalogo">
   <div class="page-header">
     <div><div class="page-title">Catálogo</div><div class="page-sub">Alta de SKU, nombre comercial y EAN</div></div>
-    <button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Nuevo producto</button>
+    <div style="display:flex;gap:0.5rem">
+      <button class="btn btn-danger btn-sm" onclick="limpiarCatalogo()">🗑️ Limpiar todo</button>
+      <button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Nuevo producto</button>
+    </div>
   </div>
   <div class="table-wrap">
     <div class="table-toolbar">
@@ -477,6 +480,7 @@ input[type=number]::-webkit-inner-spin-button { opacity:1; }
     <input class="search-input" style="width:100%;margin-bottom:0.8rem" placeholder="🔍 Buscar producto..." oninput="filterEstrellasModal(this.value)" id="estrella-search">
     <div id="estrella-modal-list" style="max-height:350px;overflow-y:auto"></div>
     <div class="modal-actions">
+      <button class="btn btn-danger" onclick="deseleccionarTodas()">Deseleccionar todo</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-estrellas')">Cerrar</button>
       <button class="btn btn-primary" onclick="saveEstrellas()">Guardar</button>
     </div>
@@ -955,9 +959,7 @@ function openEstrellasModal() {
 function filterEstrellasModal(v) { renderEstrellasModalList(v); }
 
 function getModelosUnicos() {
-  // Agrupa SKUs por nombre comercial — retorna lista de nombres únicos
-  const nombres = [...new Set(catalogo.map(p=>p.nombre).filter(Boolean))];
-  return nombres.sort();
+  return [...new Set(catalogo.map(p=>(p.nombre||'').trim()).filter(Boolean))].sort();
 }
 
 function renderEstrellasModalList(filter) {
@@ -981,6 +983,19 @@ function toggleEstrella(nombre, checked) {
   else if(!checked) estrellasSelTemp = estrellasSelTemp.filter(s=>s!==nombre);
 }
 
+function limpiarCatalogo() {
+  if(!confirm('¿Eliminar todos los productos del catálogo? Esta acción no se puede deshacer.')) return;
+  catalogo=[];
+  save('nx_cat',catalogo);
+  renderCat();renderPricingSelects();renderDash();
+  toast('Catálogo limpiado ✓');
+}
+
+function deseleccionarTodas() {
+  estrellasSelTemp=[];
+  renderEstrellasModalList(document.getElementById('estrella-search')?.value||'');
+}
+
 function saveEstrellas() {
   productosEstrella = [...estrellasSelTemp];
   save('nx_estrellas', productosEstrella);
@@ -991,134 +1006,116 @@ function saveEstrellas() {
 
 function renderEstrellasCharts() {
   const wrap = document.getElementById('estrella-charts-wrap');
+  if(!wrap) return;
   if(!productosEstrella.length || !ventasData.length) {
     wrap.innerHTML='<div class="empty" style="padding:1.5rem"><div class="empty-sub">Seleccioná productos estrella y cargá datos de ventas para ver los gráficos</div></div>';
     return;
   }
-
-  // Mes calendario actual
   const hoy=new Date();
   const inicioMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+  const diasMes=hoy.getDate();
   const vMes=ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=inicioMes&&f<=hoy;});
 
-  // Para cada modelo estrella, sumar ventas y stock de TODOS sus SKUs
+  // Agrupar por modelo comercial (nombre) sumando todos sus SKUs
   const coberturas=productosEstrella.map(nombre=>{
-    const skusDelModelo=catalogo.filter(c=>c.nombre===nombre).map(c=>c.sku);
-    const vTotal=vMes.filter(v=>skusDelModelo.includes(v.sku)).reduce((s,v)=>s+(v.cantidad||0),0);
-    const diasMes=hoy.getDate(); // días transcurridos del mes
+    const skusModelo=catalogo.filter(c=>c.nombre===nombre).map(c=>c.sku);
+    const vTotal=vMes.filter(v=>skusModelo.includes(v.sku)).reduce((s,v)=>s+(v.cantidad||0),0);
     const vDiaria=diasMes>0?vTotal/diasMes:0;
-    const stockTotal=skusDelModelo.reduce((s,sku)=>{
+    const stockTotal=skusModelo.reduce((s,sku)=>{
       const sd=stockData.find(d=>d.sku===sku);
       return s+(sd?.stockDisp||0);
     },0);
     const dias=vDiaria>0?Math.round(stockTotal/vDiaria):stockTotal>0?999:0;
-    return {nombre,dias,stock:stockTotal,vMes:vTotal,skus:skusDelModelo.length};
+    return {nombre,dias,stock:stockTotal,vMes:vTotal,skus:skusModelo.length};
   }).sort((a,b)=>a.dias-b.dias);
 
   const totalVentas=coberturas.reduce((s,c)=>s+c.vMes,0);
 
-  // Gráfico líneas por negocio (mes calendario)
+  // Líneas por negocio - mes calendario
   const negocios=[...new Set(catalogo.map(c=>c.negocio).filter(Boolean))];
-  const diasDelMes=hoy.getDate();
-  const lineData=negocios.map((neg,ni)=>{
+  const lineData=negocios.map(neg=>{
     const skusNeg=catalogo.filter(c=>c.negocio===neg).map(c=>c.sku);
     const dias=[];
-    for(let d=1;d<=diasDelMes;d++){
-      const fechaD=new Date(hoy.getFullYear(),hoy.getMonth(),d);
-      const fechaDStr=fechaD.toLocaleDateString('es-AR');
+    for(let d=1;d<=diasMes;d++){
       const vDia=ventasData.filter(v=>{
         const f=excelDateToJS(v.fecha);
         return f.getDate()===d&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear()&&skusNeg.includes(v.sku);
       }).reduce((s,v)=>s+(v.cantidad||0),0);
       dias.push(vDia);
     }
-    return {neg,dias};
+    return {neg,dias,total:dias.reduce((a,b)=>a+b,0)};
   });
 
-  wrap.innerHTML=`<div style="display:flex;flex-direction:column;gap:1.2rem">
-  <!-- FILA 1: cobertura + torta -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
-    <!-- COBERTURA -->
-    <div>
-      <div style="font-size:0.78rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">📉 Días de cobertura de stock</div>
-      ${coberturas.map(p=>{
-        const color=p.dias<=7?'var(--warn)':p.dias<=30?'#f0c040':'var(--accent)';
-        const label=p.dias===999?'Sin ventas':p.dias===0&&p.stock===0?'Sin stock':`${p.dias} días`;
-        const barPct=p.dias===999?100:Math.min((p.dias/60)*100,100);
-        return `<div style="margin-bottom:0.9rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">
-            <div style="font-size:0.8rem;font-weight:600">${p.nombre}</div>
-            <div style="font-size:0.78rem;font-weight:700;color:${color}">${label}</div>
-          </div>
-          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${barPct}%;background:${color};border-radius:3px;transition:width 0.5s ease"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:0.2rem;font-size:0.7rem;color:var(--muted)">
-            <span>Stock: ${p.stock.toLocaleString('es-AR')} u. · ${p.skus} SKU${p.skus>1?'s':''}</span>
-            <span>Venta mes: ${p.vMes.toLocaleString('es-AR')} u.</span>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-    <!-- TORTA -->
-    <div>
-      <div style="font-size:0.78rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">🍩 Participación en ventas (30d)</div>
-      <canvas id="donut-canvas" width="260" height="260" style="display:block;margin:0 auto"></canvas>
-      <div id="donut-legend" style="margin-top:0.8rem"></div>
-    </div>
-  </div>`;
+  const colorsChart=['#00e5a0','#7b61ff','#ff6b35','#f0c040','#00bcd4','#e91e63'];
 
-  // Draw donut
-  drawDonut(coberturas, totalVentas);
+  wrap.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem">
+      <!-- COBERTURA -->
+      <div>
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">📉 Días de cobertura de stock</div>
+        ${coberturas.map(p=>{
+          const color=p.dias<=7?'var(--warn)':p.dias<=30?'#f0c040':'var(--accent)';
+          const label=p.dias===999?'Sin ventas':p.dias===0&&p.stock===0?'Sin stock':p.dias+' días';
+          const barPct=p.dias===999?100:Math.min((p.dias/60)*100,100);
+          return '<div style="margin-bottom:0.9rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem"><div style="font-size:0.8rem;font-weight:600">'+p.nombre+'</div><div style="font-size:0.78rem;font-weight:700;color:'+color+'">'+label+'</div></div><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+barPct+'%;background:'+color+';border-radius:3px"></div></div><div style="display:flex;justify-content:space-between;margin-top:0.2rem;font-size:0.7rem;color:var(--muted)"><span>Stock: '+p.stock.toLocaleString('es-AR')+' u. · '+p.skus+' SKU'+(p.skus>1?'s':'')+'</span><span>Venta mes: '+p.vMes.toLocaleString('es-AR')+' u.</span></div></div>';
+        }).join('')}
+      </div>
+      <!-- TORTA -->
+      <div>
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">🍩 Participación en ventas (mes actual)</div>
+        <canvas id="donut-canvas" width="240" height="240" style="display:block;margin:0 auto"></canvas>
+        <div id="donut-legend" style="margin-top:0.7rem"></div>
+      </div>
+    </div>
+    <!-- LÍNEAS POR NEGOCIO -->
+    ${negocios.length>0?'<div><div style="font-size:0.75rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">📈 Ventas por negocio — mes actual</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1rem"><canvas id="line-canvas" width="800" height="200"></canvas><div id="line-legend" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.6rem"></div></div></div>':''}
+  `;
+
+  setTimeout(()=>{
+    drawDonut(coberturas, totalVentas);
+    if(negocios.length>0) drawLineChart(lineData, diasMes, colorsChart);
+  }, 30);
 }
 
-function drawLineChart(lineData, diasDelMes) {
+function drawLineChart(lineData, diasMes, colors) {
   const canvas=document.getElementById('line-canvas');
-  if(!canvas)return;
+  if(!canvas) return;
   const ctx=canvas.getContext('2d');
-  const W=canvas.width, H=canvas.height;
-  const pad={top:20,right:20,bottom:30,left:45};
-  const colors=['#00e5a0','#7b61ff','#ff6b35','#f0c040','#00bcd4','#e91e63'];
+  const W=canvas.offsetWidth||800; canvas.width=W;
+  const H=200; canvas.height=H;
+  const pad={top:15,right:15,bottom:28,left:42};
   ctx.clearRect(0,0,W,H);
-
-  // Max value
   const allVals=lineData.flatMap(l=>l.dias);
   const maxVal=Math.max(...allVals,1);
-
   // Grid
-  ctx.strokeStyle='#2c2d3d';ctx.lineWidth=1;
+  ctx.strokeStyle='#2c2d3d'; ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
     const y=pad.top+(H-pad.top-pad.bottom)*(1-i/4);
     ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();
     ctx.fillStyle='#6b6b88';ctx.font='10px Segoe UI';ctx.textAlign='right';
-    ctx.fillText(Math.round(maxVal*i/4),pad.left-5,y+4);
+    ctx.fillText(Math.round(maxVal*i/4),pad.left-4,y+4);
   }
-
-  // X labels (every 5 days)
+  // X labels
   ctx.fillStyle='#6b6b88';ctx.font='10px Segoe UI';ctx.textAlign='center';
-  for(let d=1;d<=diasDelMes;d+=5){
-    const x=pad.left+(d-1)/(diasDelMes-1||1)*(W-pad.left-pad.right);
+  const step=Math.ceil(diasMes/8);
+  for(let d=1;d<=diasMes;d+=step){
+    const x=pad.left+(d-1)/Math.max(diasMes-1,1)*(W-pad.left-pad.right);
     ctx.fillText(d,x,H-pad.bottom+14);
   }
-
   // Lines
   lineData.forEach((serie,si)=>{
     const color=colors[si%colors.length];
-    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
     serie.dias.forEach((v,i)=>{
-      const x=pad.left+i/(diasDelMes-1||1)*(W-pad.left-pad.right);
+      const x=pad.left+i/Math.max(diasMes-1,1)*(W-pad.left-pad.right);
       const y=pad.top+(H-pad.top-pad.bottom)*(1-v/maxVal);
       i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
     });
     ctx.stroke();
   });
-
   // Legend
   const legEl=document.getElementById('line-legend');
-  if(legEl) legEl.innerHTML=lineData.map((s,i)=>`<div style="display:flex;align-items:center;gap:0.4rem">
-    <div style="width:14px;height:3px;border-radius:2px;background:${colors[i%colors.length]}"></div>
-    <span style="font-size:0.75rem">${s.neg} (${s.dias.reduce((a,b)=>a+b,0)} u.)</span>
-  </div>`).join('');
+  if(legEl) legEl.innerHTML=lineData.map((s,i)=>`<div style="display:flex;align-items:center;gap:0.4rem"><div style="width:14px;height:3px;border-radius:2px;background:${colors[i%colors.length]}"></div><span style="font-size:0.75rem">${s.neg} (${s.total} u.)</span></div>`).join('');
 }
 
 function drawDonut(data, total) {
@@ -1128,46 +1125,3 @@ function drawDonut(data, total) {
   const cx=130,cy=130,r=100,inner=60;
   const colors=['#00e5a0','#7b61ff','#ff6b35','#f0c040','#00bcd4','#e91e63','#8bc34a','#ff9800'];
   ctx.clearRect(0,0,260,260);
-
-  if(total===0){
-    ctx.fillStyle='#2c2d3d';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#0b0c10';ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#6b6b88';ctx.font='12px Segoe UI';ctx.textAlign='center';ctx.fillText('Sin ventas',cx,cy);
-    return;
-  }
-
-  let start=-Math.PI/2;
-  const legend=[];
-  data.forEach((p,i)=>{
-    const slice=(p.vMes/total)*Math.PI*2;
-    const color=colors[i%colors.length];
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+slice);ctx.closePath();
-    ctx.fillStyle=color;ctx.fill();
-    start+=slice;
-    const pct=total>0?Math.round((p.vMes/total)*100):0;
-    legend.push({nombre:p.nombre,color,pct,vMes:p.vMes});
-  });
-
-  // Inner circle (donut hole)
-  ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);
-  ctx.fillStyle='#14151c';ctx.fill();
-  ctx.fillStyle='#e8e8f0';ctx.font='bold 18px Segoe UI';ctx.textAlign='center';ctx.fillText(total.toLocaleString('es-AR'),cx,cy-6);
-  ctx.fillStyle='#6b6b88';ctx.font='11px Segoe UI';ctx.fillText('unidades',cx,cy+12);
-
-  // Legend
-  const legEl=document.getElementById('donut-legend');
-  if(legEl) legEl.innerHTML=legend.map(l=>`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem">
-    <div style="width:10px;height:10px;border-radius:2px;background:${l.color};flex-shrink:0"></div>
-    <div style="font-size:0.75rem;flex:1">${l.nombre}</div>
-    <div style="font-size:0.75rem;font-weight:700;color:${l.color}">${l.pct}% (${l.vMes} u.)</div>
-  </div>`).join('');
-}
-
-// ===== UTILS =====
-function save(key,data){localStorage.setItem(key,JSON.stringify(data));}
-function closeModal(id){document.getElementById(id).classList.remove('open');editCatId=null;}
-function closeOut(e,id){if(e.target===document.getElementById(id))closeModal(id);}
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
-</script>
-</body>
-</html>
