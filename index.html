@@ -785,7 +785,7 @@ function importVentas(event) {
         ventasData.push({fecha:row[0],negocio:String(row[11]||'').trim(),sku:String(row[18]||'').trim(),cantidad});
       }
       save('nx_ventas',ventasData);
-      toast(`${ventasData.length} registros de ventas importados ✓`);
+      toast(`${ventasData.length} registros importados ✓ (ventas actualizadas)`);
       renderVentas();renderDash();
     }catch(err){toast('Error al leer ventas');console.error(err);}
   };
@@ -930,9 +930,10 @@ function importCatalogo(event) {
         const row=rows[i];if(!row||!row[0])continue;
         const sku=String(row[0]).trim();
         const nombre=String(row[1]||'').trim();
+        const negocio=String(row[2]||'').trim();
         if(!sku||!nombre)continue;
         if(catalogo.find(c=>c.sku===sku)){skipped++;continue;}
-        catalogo.push({id:Date.now().toString()+i,sku,nombre,ean:'',desc:'',categ:'Accesorios',minimo:0});
+        catalogo.push({id:Date.now().toString()+i,sku,nombre,ean:'',desc:'',categ:'Accesorios',negocio,minimo:0});
         added++;
       }
       save('nx_cat',catalogo);
@@ -953,23 +954,31 @@ function openEstrellasModal() {
 
 function filterEstrellasModal(v) { renderEstrellasModalList(v); }
 
+function getModelosUnicos() {
+  // Agrupa SKUs por nombre comercial — retorna lista de nombres únicos
+  const nombres = [...new Set(catalogo.map(p=>p.nombre).filter(Boolean))];
+  return nombres.sort();
+}
+
 function renderEstrellasModalList(filter) {
-  let prods = catalogo;
-  if(filter) prods = prods.filter(p=>p.nombre.toLowerCase().includes(filter.toLowerCase())||p.sku.toLowerCase().includes(filter.toLowerCase()));
+  let modelos = getModelosUnicos();
+  if(filter) modelos = modelos.filter(n=>n.toLowerCase().includes(filter.toLowerCase()));
   const el = document.getElementById('estrella-modal-list');
-  if(!prods.length){el.innerHTML='<div class="empty" style="padding:1rem"><div class="empty-sub">Sin productos en catálogo</div></div>';return;}
-  el.innerHTML = prods.map(p=>{
-    const checked = estrellasSelTemp.includes(p.sku);
+  if(!modelos.length){el.innerHTML='<div class="empty" style="padding:1rem"><div class="empty-sub">Sin productos en catálogo</div></div>';return;}
+  el.innerHTML = modelos.map(nombre=>{
+    const skusDelModelo = catalogo.filter(p=>p.nombre===nombre).map(p=>p.sku);
+    const checked = estrellasSelTemp.includes(nombre);
+    const cantSkus = skusDelModelo.length;
     return `<label style="display:flex;align-items:center;gap:0.7rem;padding:0.55rem 0.3rem;border-bottom:1px solid var(--border);cursor:pointer">
-      <input type="checkbox" ${checked?'checked':''} onchange="toggleEstrella('${p.sku}',this.checked)" style="width:16px;height:16px;accent-color:var(--accent)">
-      <div><div style="font-size:0.85rem;font-weight:600">${p.nombre}</div><div style="font-size:0.72rem;color:var(--muted)">${p.sku}</div></div>
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleEstrella('${nombre.replace(/'/g,"\'")}',this.checked)" style="width:16px;height:16px;accent-color:var(--accent)">
+      <div><div style="font-size:0.85rem;font-weight:600">${nombre}</div><div style="font-size:0.72rem;color:var(--muted)">${cantSkus} SKU${cantSkus>1?'s':''} (${skusDelModelo.slice(0,3).join(', ')}${cantSkus>3?'...':''})</div></div>
     </label>`;
   }).join('');
 }
 
-function toggleEstrella(sku, checked) {
-  if(checked && !estrellasSelTemp.includes(sku)) estrellasSelTemp.push(sku);
-  else if(!checked) estrellasSelTemp = estrellasSelTemp.filter(s=>s!==sku);
+function toggleEstrella(nombre, checked) {
+  if(checked && !estrellasSelTemp.includes(nombre)) estrellasSelTemp.push(nombre);
+  else if(!checked) estrellasSelTemp = estrellasSelTemp.filter(s=>s!==nombre);
 }
 
 function saveEstrellas() {
@@ -977,7 +986,7 @@ function saveEstrellas() {
   save('nx_estrellas', productosEstrella);
   closeModal('modal-estrellas');
   renderEstrellasCharts();
-  toast(`${productosEstrella.length} productos estrella guardados ✓`);
+  toast(`${productosEstrella.length} modelos estrella guardados ✓`);
 }
 
 function renderEstrellasCharts() {
@@ -987,34 +996,48 @@ function renderEstrellasCharts() {
     return;
   }
 
-  const hoy=new Date(); const hace30=new Date(hoy-30*864e5);
-  const v30=ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=hace30&&f<=hoy;});
+  // Mes calendario actual
+  const hoy=new Date();
+  const inicioMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+  const vMes=ventasData.filter(v=>{const f=excelDateToJS(v.fecha);return f>=inicioMes&&f<=hoy;});
 
-  // Ventas por sku estrella (30d)
-  const ventasPorSku={};
-  productosEstrella.forEach(sku=>{ventasPorSku[sku]=0;});
-  v30.forEach(v=>{if(ventasPorSku.hasOwnProperty(v.sku)) ventasPorSku[v.sku]+=(v.cantidad||0);});
-
-  // Stock disponible por sku
-  const stockPorSku={};
-  productosEstrella.forEach(sku=>{
-    const s=stockData.find(d=>d.sku===sku);
-    stockPorSku[sku]=s?.stockDisp||0;
-  });
-
-  // Dias cobertura
-  const coberturas=productosEstrella.map(sku=>{
-    const cat=catalogo.find(c=>c.sku===sku);
-    const nombre=cat?.nombre||sku;
-    const vDiaria=ventasPorSku[sku]/30;
-    const stock=stockPorSku[sku];
-    const dias=vDiaria>0?Math.round(stock/vDiaria):stock>0?999:0;
-    return {sku,nombre,dias,stock,vMes:ventasPorSku[sku]};
+  // Para cada modelo estrella, sumar ventas y stock de TODOS sus SKUs
+  const coberturas=productosEstrella.map(nombre=>{
+    const skusDelModelo=catalogo.filter(c=>c.nombre===nombre).map(c=>c.sku);
+    const vTotal=vMes.filter(v=>skusDelModelo.includes(v.sku)).reduce((s,v)=>s+(v.cantidad||0),0);
+    const diasMes=hoy.getDate(); // días transcurridos del mes
+    const vDiaria=diasMes>0?vTotal/diasMes:0;
+    const stockTotal=skusDelModelo.reduce((s,sku)=>{
+      const sd=stockData.find(d=>d.sku===sku);
+      return s+(sd?.stockDisp||0);
+    },0);
+    const dias=vDiaria>0?Math.round(stockTotal/vDiaria):stockTotal>0?999:0;
+    return {nombre,dias,stock:stockTotal,vMes:vTotal,skus:skusDelModelo.length};
   }).sort((a,b)=>a.dias-b.dias);
 
-  const totalVentas=Object.values(ventasPorSku).reduce((s,v)=>s+v,0);
+  const totalVentas=coberturas.reduce((s,c)=>s+c.vMes,0);
 
-  wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+  // Gráfico líneas por negocio (mes calendario)
+  const negocios=[...new Set(catalogo.map(c=>c.negocio).filter(Boolean))];
+  const diasDelMes=hoy.getDate();
+  const lineData=negocios.map((neg,ni)=>{
+    const skusNeg=catalogo.filter(c=>c.negocio===neg).map(c=>c.sku);
+    const dias=[];
+    for(let d=1;d<=diasDelMes;d++){
+      const fechaD=new Date(hoy.getFullYear(),hoy.getMonth(),d);
+      const fechaDStr=fechaD.toLocaleDateString('es-AR');
+      const vDia=ventasData.filter(v=>{
+        const f=excelDateToJS(v.fecha);
+        return f.getDate()===d&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear()&&skusNeg.includes(v.sku);
+      }).reduce((s,v)=>s+(v.cantidad||0),0);
+      dias.push(vDia);
+    }
+    return {neg,dias};
+  });
+
+  wrap.innerHTML=`<div style="display:flex;flex-direction:column;gap:1.2rem">
+  <!-- FILA 1: cobertura + torta -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
     <!-- COBERTURA -->
     <div>
       <div style="font-size:0.78rem;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.8rem">📉 Días de cobertura de stock</div>
@@ -1031,8 +1054,8 @@ function renderEstrellasCharts() {
             <div style="height:100%;width:${barPct}%;background:${color};border-radius:3px;transition:width 0.5s ease"></div>
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:0.2rem;font-size:0.7rem;color:var(--muted)">
-            <span>Stock: ${p.stock.toLocaleString('es-AR')} u.</span>
-            <span>Venta 30d: ${p.vMes.toLocaleString('es-AR')} u.</span>
+            <span>Stock: ${p.stock.toLocaleString('es-AR')} u. · ${p.skus} SKU${p.skus>1?'s':''}</span>
+            <span>Venta mes: ${p.vMes.toLocaleString('es-AR')} u.</span>
           </div>
         </div>`;
       }).join('')}
@@ -1047,6 +1070,55 @@ function renderEstrellasCharts() {
 
   // Draw donut
   drawDonut(coberturas, totalVentas);
+}
+
+function drawLineChart(lineData, diasDelMes) {
+  const canvas=document.getElementById('line-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const pad={top:20,right:20,bottom:30,left:45};
+  const colors=['#00e5a0','#7b61ff','#ff6b35','#f0c040','#00bcd4','#e91e63'];
+  ctx.clearRect(0,0,W,H);
+
+  // Max value
+  const allVals=lineData.flatMap(l=>l.dias);
+  const maxVal=Math.max(...allVals,1);
+
+  // Grid
+  ctx.strokeStyle='#2c2d3d';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.top+(H-pad.top-pad.bottom)*(1-i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();
+    ctx.fillStyle='#6b6b88';ctx.font='10px Segoe UI';ctx.textAlign='right';
+    ctx.fillText(Math.round(maxVal*i/4),pad.left-5,y+4);
+  }
+
+  // X labels (every 5 days)
+  ctx.fillStyle='#6b6b88';ctx.font='10px Segoe UI';ctx.textAlign='center';
+  for(let d=1;d<=diasDelMes;d+=5){
+    const x=pad.left+(d-1)/(diasDelMes-1||1)*(W-pad.left-pad.right);
+    ctx.fillText(d,x,H-pad.bottom+14);
+  }
+
+  // Lines
+  lineData.forEach((serie,si)=>{
+    const color=colors[si%colors.length];
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    serie.dias.forEach((v,i)=>{
+      const x=pad.left+i/(diasDelMes-1||1)*(W-pad.left-pad.right);
+      const y=pad.top+(H-pad.top-pad.bottom)*(1-v/maxVal);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+
+  // Legend
+  const legEl=document.getElementById('line-legend');
+  if(legEl) legEl.innerHTML=lineData.map((s,i)=>`<div style="display:flex;align-items:center;gap:0.4rem">
+    <div style="width:14px;height:3px;border-radius:2px;background:${colors[i%colors.length]}"></div>
+    <span style="font-size:0.75rem">${s.neg} (${s.dias.reduce((a,b)=>a+b,0)} u.)</span>
+  </div>`).join('');
 }
 
 function drawDonut(data, total) {
