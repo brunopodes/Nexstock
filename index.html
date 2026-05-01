@@ -249,7 +249,10 @@ input:focus,select:focus{border-color:var(--accent)}
 
 <!-- STOCK -->
 <div class="view" id="view-stock">
-  <div class="ph"><div><div class="pt">Importar Stock</div><div class="ps">Reemplaza el stock anterior cada vez que importás</div></div></div>
+  <div class="ph">
+    <div><div class="pt">Importar Stock</div><div class="ps">Reemplaza el stock anterior cada vez que importás</div></div>
+    <button class="btn bd bsm" onclick="limpiarStock()">🗑️ Limpiar stock</button>
+  </div>
   <div class="iz" onclick="document.getElementById('file-stock').click()">
     <div class="ii">📂</div><div class="it"><strong>Arrastrá tu Excel de Oracle aquí</strong>Los datos deben empezar en la fila 19 (encabezados en 17-18)</div>
   </div>
@@ -268,7 +271,10 @@ input:focus,select:focus{border-color:var(--accent)}
 
 <!-- VENTAS -->
 <div class="view" id="view-ventas">
-  <div class="ph"><div><div class="pt">Ventas</div><div class="ps">Unidades vendidas por SKU — últimos 30 días. Cada importación reemplaza la anterior.</div></div></div>
+  <div class="ph">
+    <div><div class="pt">Ventas</div><div class="ps">Unidades vendidas por SKU — últimos 30 días.</div></div>
+    <button class="btn bd bsm" onclick="limpiarVentas()">🗑️ Limpiar ventas</button>
+  </div>
   <div class="iz" onclick="document.getElementById('file-ventas').click()">
     <div class="ii">📈</div><div class="it"><strong>Importar Excel de ventas</strong>Columnas: A=Fecha, L=Negocio, S=SKU, AS=Cantidad</div>
   </div>
@@ -424,11 +430,12 @@ function closeOut(e,id){if(e.target===document.getElementById(id)) closeModal(id
 
 function excelDate(s){
   if(!s) return new Date(0);
-  if(typeof s==='string'){
-    if(s.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(s.substring(0,10)+'T12:00:00');
-    if(s.includes('/')) return new Date(s.split('/').reverse().join('-')+'T12:00:00');
+  // Dates stored as yyyy-mm-dd strings after import
+  if(typeof s==='string'&&s.length>=10){
+    var parts=s.substring(0,10).split('-');
+    if(parts.length===3) return new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]),12,0,0);
   }
-  if(typeof s==='number') return new Date((s-25569)*86400*1000);
+  if(typeof s==='number') return new Date(Math.round((s-25569)*86400*1000));
   return new Date(0);
 }
 
@@ -477,12 +484,23 @@ function renderDash(){
   if(!data.length){body.innerHTML='<div class="empty"><div class="es">Sin resultados para ese filtro</div></div>';return;}
 
   var vSku=getVmesSku();
-  body.innerHTML='<table><thead><tr><th>Nombre comercial</th><th>SKU</th><th>Categoría</th><th>Stock Total</th><th>Disponible</th><th>Vtas mes</th><th>Estado</th></tr></thead><tbody>'+data.map(function(d){
+  // Calcular unidades en camino por SKU desde compras
+  var enCamino={};
+  comprasData.forEach(function(oc){
+    oc.items.forEach(function(item){
+      enCamino[item.sku]=(enCamino[item.sku]||0)+item.cantidad;
+    });
+  });
+
+  body.innerHTML='<table><thead><tr><th>Nombre comercial</th><th>SKU</th><th>Categoría</th><th>Stock Total</th><th>Disponible</th><th>Vtas 30d</th><th>En camino</th><th>Estado</th></tr></thead><tbody>'+data.map(function(d){
     var pct2=d.stockTotal>0?Math.min((d.stockDisp/d.stockTotal)*100,100):0;
     var crit=d.stockDisp===0;var bajo=d.minimo>0&&d.stockDisp<=d.minimo&&d.stockDisp>0;
     var col=crit?'var(--warn)':bajo?'#f0c040':'var(--accent)';
     var v=vSku[d.sku]||0;
-    return '<tr><td><div class="pn">'+d.nombre+'</div></td><td><div class="pk">'+d.sku+'</div></td><td><span class="badge bp">'+d.categ+'</span></td><td>'+(d.stockTotal||0).toLocaleString('es-AR')+'</td><td><div class="sb"><div class="bb"><div class="bf" style="width:'+pct2+'%;background:'+col+'"></div></div><span style="font-size:.78rem;min-width:25px">'+(d.stockDisp||0).toLocaleString('es-AR')+'</span></div></td><td style="color:var(--accent2);font-weight:600">'+(v>0?v:'—')+'</td><td><span class="badge '+(crit?'bo':bajo?'bo':'bg')+'">'+(crit?'⚠ Sin stock':bajo?'⚠ Bajo':'✓ OK')+'</span></td></tr>';
+    var camino=enCamino[d.sku]||0;
+    var caminoHTML=camino>0?'<span style="color:var(--accent2);font-weight:600">'+camino.toLocaleString('es-AR')+' u.</span>':'<span style="color:var(--muted)">—</span>';
+    var estadoHTML=crit&&camino>0?'<span class="badge bp">📦 '+camino+' en camino</span>':(crit?'<span class="badge bo">⚠ Sin stock</span>':bajo?'<span class="badge bo">⚠ Bajo</span>':'<span class="badge bg">✓ OK</span>');
+    return '<tr><td><div class="pn">'+d.nombre+'</div></td><td><div class="pk">'+d.sku+'</div></td><td><span class="badge bp">'+d.categ+'</span></td><td>'+(d.stockTotal||0).toLocaleString('es-AR')+'</td><td><div class="sb"><div class="bb"><div class="bf" style="width:'+pct2+'%;background:'+col+'"></div></div><span style="font-size:.78rem;min-width:25px">'+(d.stockDisp||0).toLocaleString('es-AR')+'</span></div></td><td style="color:var(--accent2);font-weight:600">'+(v>0?v:'—')+'</td><td>'+caminoHTML+'</td><td>'+estadoHTML+'</td></tr>';
   }).join('')+'</tbody></table>';
 
   renderEstrellas();
@@ -654,6 +672,19 @@ function drawLine(lineData,diasMes){
 }
 
 // ===== CATÁLOGO =====
+function limpiarVentas(){
+  if(!confirm('¿Eliminar todos los datos de ventas?')) return;
+  ventasData=[];save('nx_ventas',ventasData);renderVentas();renderDash();toast('Ventas limpiadas ✓');
+}
+
+function limpiarStock(){
+  if(!confirm('¿Eliminar todos los datos de stock?')) return;
+  stockData=[];save('nx_stock',stockData);
+  localStorage.removeItem('nx_ultima');
+  document.getElementById('st-ultima').textContent='—';
+  renderDash();toast('Stock limpiado ✓');
+}
+
 function limpiarCatalogo(){
   if(!confirm('¿Eliminar todos los productos del catálogo? No se puede deshacer.')) return;
   catalogo=[];save('nx_cat',catalogo);renderCat();renderPSels();renderDash();toast('Catálogo limpiado ✓');
@@ -865,9 +896,9 @@ function importVentas(event){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      // Sin cellDates para que las fechas vengan como serial number, mas confiable
+      var wb=XLSX.read(e.target.result,{type:'array'});
       var ws=wb.Sheets[wb.SheetNames[0]];
-      // Usar raw:true para obtener fechas como objeto Date y numeros como numeros
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       ventasData=[];
       for(var i=1;i<rows.length;i++){
@@ -876,20 +907,12 @@ function importVentas(event){
         var sku=String(row[18]||'').trim();
         if(!sku) continue;
         var cant=parseFloat(row[44])||0;
-        // Incluir devoluciones (cantidades negativas) para tener venta neta real
         if(cant===0) continue;
-        // Manejar fecha como Date object o string
-        var fecha=row[0];
-        var fechaStr='';
-        if(fecha instanceof Date){
-          fechaStr=fecha.getFullYear()+'-'+String(fecha.getMonth()+1).padStart(2,'0')+'-'+String(fecha.getDate()).padStart(2,'0');
-        } else if(typeof fecha==='number'){
-          var d=new Date((fecha-25569)*86400*1000);
-          fechaStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-        } else {
-          fechaStr=String(fecha||'').substring(0,10);
-        }
-        if(!fechaStr) continue;
+        var serial=row[0];
+        if(!serial) continue;
+        // Convertir serial de Excel a fecha yyyy-mm-dd
+        var d=new Date(Math.round((serial-25569)*86400*1000));
+        var fechaStr=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
         ventasData.push({
           fecha:fechaStr,
           negocio:String(row[11]||'').trim(),
@@ -898,9 +921,9 @@ function importVentas(event){
         });
       }
       save('nx_ventas',ventasData);
-      toast(ventasData.length+' registros importados ✓ (ventas reemplazadas)');
+      toast(ventasData.length+' registros importados ✓');
       renderVentas();renderDash();
-    }catch(err){toast('Error al leer ventas: '+err.message);console.error(err);}
+    }catch(err){toast('Error: '+err.message);console.error(err);}
   };
   reader.readAsArrayBuffer(file);event.target.value='';
 }
