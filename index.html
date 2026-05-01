@@ -130,7 +130,7 @@ input:focus,select:focus{border-color:var(--accent)}
     <div class="sc"><div class="sl">Stock Total</div><div class="sv" id="st-total">0</div><div class="ss">unidades en depósito</div></div>
     <div class="sc"><div class="sl">Disponible venta</div><div class="sv g" id="st-disp">0</div><div class="ss">unidades disponibles</div></div>
     <div class="sc"><div class="sl">Sin stock</div><div class="sv o" id="st-crit">0</div><div class="ss">productos en cero</div></div>
-    <div class="sc"><div class="sl">Ventas mes actual</div><div class="sv p" id="st-vmes">0</div><div class="ss">unidades vendidas</div></div>
+    <div class="sc"><div class="sl">Ventas últimos 30d</div><div class="sv p" id="st-vmes">0</div><div class="ss">unidades vendidas</div></div>
     <div class="sc"><div class="sl">Última importación</div><div class="sv" style="font-size:.9rem;padding-top:.4rem" id="st-ultima">—</div></div>
   </div>
   <!-- ESTRELLAS -->
@@ -268,7 +268,7 @@ input:focus,select:focus{border-color:var(--accent)}
 
 <!-- VENTAS -->
 <div class="view" id="view-ventas">
-  <div class="ph"><div><div class="pt">Ventas</div><div class="ps">Unidades vendidas por SKU — mes actual. Cada importación reemplaza la anterior.</div></div></div>
+  <div class="ph"><div><div class="pt">Ventas</div><div class="ps">Unidades vendidas por SKU — últimos 30 días. Cada importación reemplaza la anterior.</div></div></div>
   <div class="iz" onclick="document.getElementById('file-ventas').click()">
     <div class="ii">📈</div><div class="it"><strong>Importar Excel de ventas</strong>Columnas: A=Fecha, L=Negocio, S=SKU, AS=Cantidad</div>
   </div>
@@ -464,8 +464,8 @@ function renderDash(){
   document.getElementById('st-disp').textContent=merged.reduce(function(s,d){return s+(d.stockDisp||0);},0).toLocaleString('es-AR');
   document.getElementById('st-crit').textContent=merged.filter(function(d){return (d.stockDisp||0)===0;}).length;
 
-  var hoy=new Date();var iMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
-  var vmes=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=iMes&&f<=hoy;}).reduce(function(s,v){return s+(v.cantidad||0);},0);
+  var hoy=new Date();var hace30=new Date(hoy-30*86400*1000);
+  var vmes=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=hace30&&f<=hoy;}).reduce(function(s,v){return s+(v.cantidad||0);},0);
   document.getElementById('st-vmes').textContent=vmes.toLocaleString('es-AR');
 
   var categs=[...new Set(merged.map(function(d){return d.categ;}).filter(function(c){return c&&c!=='—';}))];
@@ -535,9 +535,9 @@ function renderEstrellas(){
     return;
   }
   var hoy=new Date();
-  var iMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
-  var diasMes=hoy.getDate();
-  var vMes=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=iMes&&f<=hoy;});
+  var hace30=new Date(hoy-30*86400*1000);
+  var diasMes=30;
+  var vMes=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=hace30&&f<=hoy;});
 
   var coberturas=estrellas.map(function(nombre){
     var skus=catalogo.filter(function(c){return (c.nombre||'').trim()===nombre.trim();}).map(function(c){return c.sku;});
@@ -557,9 +557,10 @@ function renderEstrellas(){
     var dias=[];
     for(var d=1;d<=diasMes;d++){
       var dd=d;
+      var diaFecha=new Date(hoy-((diasMes-dd)*86400*1000));
       var vd=ventasData.filter(function(v){
         var f=excelDate(v.fecha);
-        return f.getDate()===dd&&f.getMonth()===hoy.getMonth()&&f.getFullYear()===hoy.getFullYear()&&skusNeg.includes(v.sku);
+        return f.getDate()===diaFecha.getDate()&&f.getMonth()===diaFecha.getMonth()&&f.getFullYear()===diaFecha.getFullYear()&&skusNeg.includes(v.sku);
       }).reduce(function(s,v){return s+(v.cantidad||0);},0);
       dias.push(vd);
     }
@@ -906,8 +907,8 @@ function importVentas(event){
 
 function renderVentas(filter){
   filter=filter||'';
-  var hoy=new Date();var iMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
-  var data=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=iMes&&f<=hoy;});
+  var hoy=new Date();var hace30=new Date(hoy-30*86400*1000);
+  var data=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=hace30&&f<=hoy;});
   if(vfn) data=data.filter(function(v){return v.negocio===vfn;});
   var agrup={};
   data.forEach(function(v){if(!agrup[v.sku]) agrup[v.sku]={sku:v.sku,cantidad:0};agrup[v.sku].cantidad+=v.cantidad;});
@@ -918,13 +919,13 @@ function renderVentas(filter){
   negSel.innerHTML='<option value="">Todos los negocios</option>'+negs.map(function(n){return '<option value="'+n+'"'+(n===vfn?' selected':'')+'>'+n+'</option>';}).join('');
   var body=document.getElementById('ventas-body');
   if(!ventasData.length){body.innerHTML='<div class="empty"><div class="ei">📈</div><div class="et">Sin datos</div><div class="es">Importá tu Excel de ventas</div></div>';return;}
-  if(!rows.length){body.innerHTML='<div class="empty"><div class="es">Sin ventas en el mes actual para ese filtro</div></div>';return;}
+  if(!rows.length){body.innerHTML='<div class="empty"><div class="es">Sin ventas en los últimos 30 días para ese filtro</div></div>';return;}
   body.innerHTML='<table><thead><tr><th>SKU</th><th>Nombre comercial</th><th>Unidades vendidas (mes actual)</th></tr></thead><tbody>'+rows.map(function(r){var cat=catalogo.find(function(c){return c.sku===r.sku;});return '<tr><td><div class="pk" style="font-size:.78rem">'+r.sku+'</div></td><td><div class="pn">'+(cat?cat.nombre:'—')+'</div></td><td style="color:var(--accent2);font-weight:700;font-size:.95rem">'+r.cantidad.toLocaleString('es-AR')+'</td></tr>';}).join('')+'</tbody></table>';
 }
 
 function exportVentas(){
-  var hoy=new Date();var iMes=new Date(hoy.getFullYear(),hoy.getMonth(),1);
-  var data=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=iMes&&f<=hoy;});
+  var hoy=new Date();var hace30=new Date(hoy-30*86400*1000);
+  var data=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=hace30&&f<=hoy;});
   var agrup={};data.forEach(function(v){if(!agrup[v.sku]) agrup[v.sku]={SKU:v.sku,Cantidad:0};agrup[v.sku].Cantidad+=v.cantidad;});
   var ws=XLSX.utils.json_to_sheet(Object.values(agrup));var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ventas');XLSX.writeFile(wb,'nexstock_ventas_mes.xlsx');toast('Exportado ✓');
 }
