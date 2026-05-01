@@ -486,7 +486,7 @@ function renderDash(){
 
 // ===== ESTRELLAS =====
 function getModelos(){
-  return [...new Set(catalogo.map(function(p){return (p.nombre||'').trim();}).filter(Boolean))].sort();
+  return [...new Set(catalogo.map(function(p){return (p.nombre||'').trim();}).filter(Boolean))].sort(function(a,b){return a.localeCompare(b,'es');});
 }
 
 function openEstrellasModal(){
@@ -502,7 +502,7 @@ function renderEstModal(filter){
   var el=document.getElementById('est-list');
   if(!modelos.length){el.innerHTML='<div class="empty" style="padding:1rem"><div class="es">Sin productos en catálogo</div></div>';return;}
   el.innerHTML=modelos.map(function(nombre){
-    var skus=catalogo.filter(function(p){return p.nombre===nombre;}).map(function(p){return p.sku;});
+    var skus=catalogo.filter(function(p){return (p.nombre||'').trim()===nombre.trim();}).map(function(p){return p.sku;});
     var checked=estTemp.includes(nombre);
     return '<label style="display:flex;align-items:center;gap:.7rem;padding:.55rem .3rem;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox"'+(checked?' checked':'')+' onchange="toggleEst(\''+nombre.replace(/'/g,"\\'")+'\'  ,this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"><div><div style="font-size:.85rem;font-weight:600">'+nombre+'</div><div style="font-size:.72rem;color:var(--muted)">'+skus.length+' SKU'+(skus.length>1?'s':'')+' — '+skus.slice(0,2).join(', ')+(skus.length>2?'...':'')+'</div></div></label>';
   }).join('');
@@ -536,7 +536,7 @@ function renderEstrellas(){
   var vMes=ventasData.filter(function(v){var f=excelDate(v.fecha);return f>=iMes&&f<=hoy;});
 
   var coberturas=estrellas.map(function(nombre){
-    var skus=catalogo.filter(function(c){return c.nombre===nombre;}).map(function(c){return c.sku;});
+    var skus=catalogo.filter(function(c){return (c.nombre||'').trim()===nombre.trim();}).map(function(c){return c.sku;});
     var vTotal=vMes.filter(function(v){return skus.includes(v.sku);}).reduce(function(s,v){return s+(v.cantidad||0);},0);
     var vDiaria=diasMes>0?vTotal/diasMes:0;
     var stockT=skus.reduce(function(s,sku){var sd=stockData.find(function(d){return d.sku===sku;});return s+(sd?sd.stockDisp:0);},0);
