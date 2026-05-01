@@ -424,8 +424,12 @@ function closeOut(e,id){if(e.target===document.getElementById(id)) closeModal(id
 
 function excelDate(s){
   if(!s) return new Date(0);
-  if(typeof s==='string'&&s.includes('/')) return new Date(s.split('/').reverse().join('-'));
-  return new Date((s-25569)*86400*1000);
+  if(typeof s==='string'){
+    if(s.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(s.substring(0,10)+'T12:00:00');
+    if(s.includes('/')) return new Date(s.split('/').reverse().join('-')+'T12:00:00');
+  }
+  if(typeof s==='number') return new Date((s-25569)*86400*1000);
+  return new Date(0);
 }
 
 // ===== DASHBOARD =====
@@ -860,19 +864,42 @@ function importVentas(event){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
       var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      // Usar raw:true para obtener fechas como objeto Date y numeros como numeros
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       ventasData=[];
       for(var i=1;i<rows.length;i++){
-        var row=rows[i];if(!row||!row[0]||!row[18]) continue;
+        var row=rows[i];
+        if(!row||row.length===0) continue;
+        var sku=String(row[18]||'').trim();
+        if(!sku) continue;
         var cant=parseFloat(row[44])||0;
-        ventasData.push({fecha:row[0],negocio:String(row[11]||'').trim(),sku:String(row[18]||'').trim(),cantidad:cant});
+        // Incluir devoluciones (cantidades negativas) para tener venta neta real
+        if(cant===0) continue;
+        // Manejar fecha como Date object o string
+        var fecha=row[0];
+        var fechaStr='';
+        if(fecha instanceof Date){
+          fechaStr=fecha.getFullYear()+'-'+String(fecha.getMonth()+1).padStart(2,'0')+'-'+String(fecha.getDate()).padStart(2,'0');
+        } else if(typeof fecha==='number'){
+          var d=new Date((fecha-25569)*86400*1000);
+          fechaStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        } else {
+          fechaStr=String(fecha||'').substring(0,10);
+        }
+        if(!fechaStr) continue;
+        ventasData.push({
+          fecha:fechaStr,
+          negocio:String(row[11]||'').trim(),
+          sku:sku,
+          cantidad:cant
+        });
       }
       save('nx_ventas',ventasData);
       toast(ventasData.length+' registros importados ✓ (ventas reemplazadas)');
       renderVentas();renderDash();
-    }catch(err){toast('Error al leer ventas');console.error(err);}
+    }catch(err){toast('Error al leer ventas: '+err.message);console.error(err);}
   };
   reader.readAsArrayBuffer(file);event.target.value='';
 }
