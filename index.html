@@ -182,72 +182,127 @@ input:focus,select:focus{border-color:var(--accent)}
 <!-- PRICING -->
 
 <div class="view" id="view-pricing">
-<div class="ph"><div><div class="pt">Pricing</div><div class="ps">Calculá precios de venta</div></div></div>
+<div class="ph"><div><div class="pt">Pricing</div><div class="ps">Calculá el margen bruto por producto</div></div></div>
 <div class="pl">
+<!-- COLUMNA IZQUIERDA: INPUTS -->
 <div style="display:flex;flex-direction:column;gap:1rem">
+
+```
+<!-- Producto -->
 <div class="tw" style="padding:1.2rem">
 <div class="stt">Producto</div>
 <div class="fg">
-<div class="fgr full"><label>Seleccioná un producto</label><select id="p-prod" onchange="onProdSelect()"><option value="">— Seleccioná —</option></select></div>
-<div class="fgr"><label>Costo ($) <span style="color:var(--accent);font-size:.65rem">auto desde base</span></label><input type="number" id="p-costo" placeholder="0" oninput="calcP()"></div>
-<div class="fgr"><label>Margen objetivo (%)</label><input type="number" id="p-margen" placeholder="30" oninput="calcP()"></div>
+<div class="fgr full"><label>Seleccioná un producto</label>
+<select id="p-prod" onchange="onProdSelect()"><option value="">— Seleccioná —</option></select>
+</div>
+<div class="fgr"><label>Costo ($) <span style="color:var(--accent);font-size:.65rem">auto desde base</span></label>
+<input type="number" id="p-costo" placeholder="0" oninput="calcP()">
+</div>
+<div class="fgr"><label>PVP — Precio al público ($)</label>
+<input type="number" id="p-pvp" placeholder="10000" oninput="calcP()">
+</div>
+<div class="fgr"><label>Mark up (divisor)</label>
+<input type="number" id="p-markup" placeholder="1" value="1" oninput="calcP()">
+</div>
+<div class="fgr"><label>Plazo de venta (días)</label>
+<input type="number" id="p-plazo" placeholder="30" oninput="calcP()">
+</div>
+<div class="fgr"><label>Tasa de interés anual (%)</label>
+<input type="number" id="p-tasa" placeholder="120" oninput="calcP()">
 </div>
 </div>
+</div>
+
+<!-- Canal -->
 <div class="tw" style="padding:1.2rem">
 <div class="stt">Canal de venta</div>
 <div class="fg">
-<div class="fgr"><label>Marketplace</label><select id="p-mp" onchange="onMpChange()"><option value="">— Seleccioná —</option></select></div>
+<div class="fgr"><label>Marketplace</label>
+<select id="p-mp" onchange="onMpChange()"><option value="">— Seleccioná —</option></select>
+</div>
 <div class="fgr"><label>Cuotas</label>
 <select id="p-cuotas" onchange="onCuotasChange()">
 <option value="">— Seleccioná —</option>
-<option value="1">1 cuota</option><option value="3">3 cuotas</option><option value="6">6 cuotas</option>
-<option value="9">9 cuotas</option><option value="12">12 cuotas</option><option value="15">15 cuotas</option>
+<option value="1">1 cuota</option><option value="3">3 cuotas</option>
+<option value="6">6 cuotas</option><option value="9">9 cuotas</option>
+<option value="12">12 cuotas</option><option value="15">15 cuotas</option>
 <option value="18">18 cuotas</option><option value="21">21 cuotas</option>
 </select>
 </div>
-<div class="fgr"><label>Comisión canal (%) <span style="color:var(--accent);font-size:.65rem">auto</span></label><input type="number" id="p-comcanal" placeholder="0" oninput="calcP()"></div>
-<div class="fgr"><label>Comisión cuotas (%) <span style="color:var(--accent);font-size:.65rem">auto</span></label><input type="number" id="p-comcuotas" placeholder="0" oninput="calcP()"></div>
+<div class="fgr"><label>Comisión fija (%) <span style="color:var(--accent);font-size:.65rem">auto</span></label>
+<input type="number" id="p-comfija" placeholder="1.8" oninput="calcP()">
+</div>
+<div class="fgr"><label>Comisión cuotas (%) <span style="color:var(--accent);font-size:.65rem">auto</span></label>
+<input type="number" id="p-comcuotas" placeholder="0" oninput="calcP()">
 </div>
 </div>
-<div class="tw" style="padding:1.2rem">
-<div class="stt">Financiación</div>
-<div class="fg">
-<div class="fgr"><label>Tasa interés anual (%)</label><input type="number" id="p-tasa" placeholder="120" oninput="calcP()"></div>
-<div class="fgr"><label>Plazo de pago (días)</label><input type="number" id="p-plazo" placeholder="30" oninput="calcP()"></div>
-<div class="fgr full"><label>Interés resultante (%) <span style="color:var(--accent);font-size:.65rem">calculado</span></label><input type="number" id="p-intcalc" placeholder="0" readonly style="background:rgba(0,229,160,.05);border-color:var(--accent);opacity:.8"></div>
 </div>
-</div>
+
+<!-- Impuestos y envio -->
 <div class="tw" style="padding:1.2rem">
 <div class="stt" style="display:flex;justify-content:space-between;align-items:center">
-Impuestos <button class="ab" onclick="addImp()">+ Agregar impuesto</button>
+Impuestos adicionales <button class="ab" onclick="addImp()">+ Agregar</button>
 </div>
 <div id="imp-list"></div>
+<div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+<div class="fgr"><label>Costo de envío ($)</label>
+<input type="number" id="p-envio" placeholder="0" oninput="calcP()">
 </div>
 </div>
+</div>
+
+</div>
+
+<!-- COLUMNA DERECHA: RESULTADO -->
 <div style="display:flex;flex-direction:column;gap:1rem">
 <div class="tw" style="padding:1.2rem">
-<div class="stt">Resultado</div>
+<div class="stt">Desglose del precio</div>
 <div class="cb">
-<div class="ct">Desglose</div>
-<div class="cr"><span>Costo base</span><span id="r-costo">$0</span></div>
-<div class="cr"><span>+ Interés financiero</span><span id="r-int">$0</span></div>
-<div class="cr"><span>+ Comisión canal</span><span id="r-canal">$0</span></div>
-<div class="cr"><span>+ Comisión cuotas</span><span id="r-cuotas">$0</span></div>
+<div class="ct">Cálculo paso a paso</div>
+<div class="cr"><span>PVP (precio al público)</span><span id="r-pvp" style="font-weight:700">$0</span></div>
+<div class="cr"><span>÷ Mark up</span><span id="r-markup">÷ 1</span></div>
+<div class="cr" style="border-top:1px solid var(--border);padding-top:.5rem;margin-top:.3rem"><span>Lo que facturo</span><span id="r-factura" style="font-weight:700;color:var(--text)">$0</span></div>
+<div class="cr"><span>− IVA (21%)</span><span id="r-iva">$0</span></div>
+<div class="cr" style="border-top:1px solid var(--border);padding-top:.5rem;margin-top:.3rem"><span>Mi ingreso</span><span id="r-ingreso" style="font-weight:700;color:var(--text)">$0</span></div>
+<div class="cr"><span>− Interés implícito</span><span id="r-interes">$0</span></div>
+<div class="cr" style="border-top:1px solid var(--border);padding-top:.5rem;margin-top:.3rem"><span>Venta neta</span><span id="r-vneta" style="font-weight:700;color:var(--text)">$0</span></div>
 <div id="r-imp-rows"></div>
-<div class="cr"><span>+ Margen objetivo</span><span id="r-margen">$0</span></div>
-<div class="cr tot"><span>Precio sugerido</span><span id="r-total">$0</span></div>
+<div class="cr"><span>− Comisión cuotas</span><span id="r-comcuotas">$0</span></div>
+<div class="cr"><span>− Comisión fija</span><span id="r-comfija">$0</span></div>
+<div class="cr"><span>− Costo de envío</span><span id="r-envio">$0</span></div>
 </div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.8rem">
-<div class="sc" style="padding:.8rem"><div class="sl">Margen bruto</div><div class="sv g" id="r-mb" style="font-size:1.4rem">0%</div></div>
-<div class="sc" style="padding:.8rem"><div class="sl">Ganancia</div><div class="sv" id="r-gan" style="font-size:1.2rem">$0</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.9rem">
+<div class="sc" style="padding:.9rem">
+<div class="sl">Margen bruto $</div>
+<div class="sv g" id="r-mb-pesos" style="font-size:1.4rem">$0</div>
 </div>
-<button class="btn bp2" style="width:100%;margin-top:.8rem" onclick="guardarP()">💾 Guardar precio</button>
+<div class="sc" style="padding:.9rem">
+<div class="sl">Margen bruto %</div>
+<div class="sv g" id="r-mb-pct" style="font-size:1.4rem">0%</div>
 </div>
+<div class="sc" style="padding:.9rem">
+<div class="sl">Costo</div>
+<div class="sv" id="r-costo-show" style="font-size:1.2rem">$0</div>
+</div>
+<div class="sc" style="padding:.9rem">
+<div class="sl">Lo que facturo</div>
+<div class="sv" id="r-factura2" style="font-size:1.2rem">$0</div>
+</div>
+</div>
+<button class="btn bp2" style="width:100%;margin-top:.9rem" onclick="guardarP()">💾 Guardar precio</button>
+</div>
+
+<!-- Precios guardados -->
 <div class="tw">
-<div class="tt"><div style="font-size:.82rem;font-weight:700">Precios guardados</div><button class="btn bs bsm" onclick="exportP()">↓ Exportar</button></div>
+<div class="tt">
+<div style="font-size:.82rem;font-weight:700">Precios guardados</div>
+<button class="btn bs bsm" onclick="exportP()">↓ Exportar</button>
+</div>
 <div id="p-saved"><div class="empty" style="padding:1.5rem"><div class="es">Guardá precios para verlos acá</div></div></div>
 </div>
 </div>
+```
+
 </div>
 </div>
 
@@ -534,11 +589,24 @@ var modelos=getModelos();
 if(filter) modelos=modelos.filter(function(n){return n.toLowerCase().includes(filter.toLowerCase());});
 var el=document.getElementById('est-list');
 if(!modelos.length){el.innerHTML='<div class="empty" style="padding:1rem"><div class="es">Sin productos en catálogo</div></div>';return;}
-el.innerHTML=modelos.map(function(nombre){
+// Build list using DOM to avoid quote escaping issues
+var items=modelos.map(function(nombre,idx){
 var skus=catalogo.filter(function(p){return (p.nombre||'').trim()===nombre.trim();}).map(function(p){return p.sku;});
 var checked=estTemp.includes(nombre);
-return '<label style="display:flex;align-items:center;gap:.7rem;padding:.55rem .3rem;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox"'+(checked?' checked':'')+' onchange="toggleEst(\''+nombre.replace(/'/g,"\\'")+'\' ,this.checked)" style="width:16px;height:16px;accent-color:var(--accent)"><div><div style="font-size:.85rem;font-weight:600">'+nombre+'</div><div style="font-size:.72rem;color:var(--muted)">'+skus.length+' SKU'+(skus.length>1?'s':'')+' — '+skus.slice(0,2).join(', ')+(skus.length>2?'...':'')+'</div></div></label>';
+return '<div style="display:flex;align-items:center;gap:.7rem;padding:.55rem .3rem;border-bottom:1px solid var(--border)">'+
+'<input type="checkbox" id="est_'+idx+'" '+(checked?'checked':'')+' style="width:16px;height:16px;accent-color:var(--accent)">'+
+'<label for="est_'+idx+'" style="cursor:pointer;flex:1">'+
+'<div style="font-size:.85rem;font-weight:600">'+nombre+'</div>'+
+'<div style="font-size:.72rem;color:var(--muted)">'+skus.length+' SKU'+(skus.length>1?'s':'')+' — '+skus.slice(0,2).join(', ')+(skus.length>2?'...':'')+'</div>'+
+'</label>'+
+'</div>';
 }).join('');
+el.innerHTML=items;
+// Attach events after DOM insert to avoid escaping issues
+modelos.forEach(function(nombre,idx){
+var cb=document.getElementById('est_'+idx);
+if(cb) cb.addEventListener('change',function(){toggleEst(nombre,this.checked);});
+});
 }
 
 function toggleEst(nombre,checked){
@@ -816,63 +884,123 @@ function onMpChange(){var mp=document.getElementById('p-mp').value;var c=documen
 function onCuotasChange(){var mp=document.getElementById('p-mp').value;var c=document.getElementById('p-cuotas').value;if(mp&&c) autoComision(mp,c);calcP();}
 
 function autoComision(mp,cuotas){
-var base=comisiones[mp+'|1'];if(base!==undefined) document.getElementById('p-comcanal').value=base;
-var com=comisiones[mp+'|'+cuotas];if(com!==undefined){document.getElementById('p-comcuotas').value=com;toast('Comisión cargada automáticamente ✓');}
+var base=comisiones[mp+'|1'];if(base!==undefined){document.getElementById('p-comfija').value=base;}
+var com=comisiones[mp+'|'+cuotas];if(com!==undefined){document.getElementById('p-comcuotas').value=com;toast('Comisiones cargadas automáticamente ✓');}
 }
 
 function renderImp(){
 var list=document.getElementById('imp-list');
-if(!impuestos.length){list.innerHTML='<p style="color:var(--muted);font-size:.8rem">Sin impuestos. Hacé click en "+ Agregar impuesto".</p>';return;}
-list.innerHTML=impuestos.map(function(imp,i){return '<div class="ir"><input type="text" value="'+imp.nombre+'" placeholder="Nombre (ej: IVA)" onchange="impuestos['+i+'].nombre=this.value;calcP()"><input type="number" value="'+imp.pct+'" placeholder="%" style="width:80px" onchange="impuestos['+i+'].pct=parseFloat(this.value)||0;calcP()"><span style="color:var(--muted);font-size:.8rem">%</span><button class="rb" onclick="removeImp('+i+')">✕</button></div>';}).join('');
+if(!impuestos.length){list.innerHTML='<p style="color:var(--muted);font-size:.8rem;margin-bottom:.5rem">Sin impuestos adicionales.</p>';return;}
+list.innerHTML=impuestos.map(function(imp,i){
+return '<div class="ir" style="flex-wrap:wrap">'+
+'<input type="text" value="'+(imp.nombre||'')+'" placeholder="Nombre (ej: IIBB)" onchange="impuestos['+i+'].nombre=this.value;calcP()" style="flex:2;min-width:100px">'+
+'<input type="number" value="'+(imp.pct||'')+'" placeholder="%" style="width:70px;flex:none" onchange="impuestos['+i+'].pct=parseFloat(this.value)||0;calcP()">'+
+'<select style="flex:1;min-width:110px" onchange="impuestos['+i+'].base=this.value;calcP()">'+
+'<option value="ingreso"'+(imp.base!=='factura'?' selected':'')+'>s/ ingreso</option>'+
+'<option value="factura"'+(imp.base==='factura'?' selected':'')+'>s/ factura</option>'+
+'</select>'+
+'<button class="rb" onclick="removeImp('+i+')">✕</button>'+
+'</div>';
+}).join('');
 calcP();
 }
 
-function addImp(){impuestos.push({nombre:'',pct:0});save('nx_impuestos',impuestos);renderImp();}
+function addImp(){impuestos.push({nombre:'',pct:0,base:'ingreso'});save('nx_impuestos',impuestos);renderImp();}
 function removeImp(i){impuestos.splice(i,1);save('nx_impuestos',impuestos);renderImp();}
 
 function calcP(){
 save('nx_impuestos',impuestos);
 var costo=parseFloat(document.getElementById('p-costo').value)||0;
-var margen=parseFloat(document.getElementById('p-margen').value)||0;
-var tasa=parseFloat(document.getElementById('p-tasa').value)||0;
+var pvp=parseFloat(document.getElementById('p-pvp').value)||0;
+var markup=parseFloat(document.getElementById('p-markup').value)||1;
 var plazo=parseFloat(document.getElementById('p-plazo').value)||0;
-var comCanal=parseFloat(document.getElementById('p-comcanal').value)||0;
+var tasa=parseFloat(document.getElementById('p-tasa').value)||0;
+var comFija=parseFloat(document.getElementById('p-comfija').value)||0;
 var comCuotas=parseFloat(document.getElementById('p-comcuotas').value)||0;
-var intCalc=tasa*(plazo/365);
-document.getElementById('p-intcalc').value=Math.round(intCalc*100)/100;
-var totalImp=impuestos.reduce(function(s,i){return s+(parseFloat(i.pct)||0);},0);
-var totalPct=intCalc+comCanal+comCuotas+totalImp+margen;
-var precio=totalPct<100?costo/(1-totalPct/100):0;
-var ganancia=precio-costo;
-var mb=precio>0?(ganancia/precio)*100:0;
-document.getElementById('r-costo').textContent=fmt(costo);
-document.getElementById('r-int').textContent=fmt(costo*intCalc/100);
-document.getElementById('r-canal').textContent=fmt(precio*comCanal/100);
-document.getElementById('r-cuotas').textContent=fmt(precio*comCuotas/100);
-document.getElementById('r-margen').textContent=fmt(precio*margen/100);
-document.getElementById('r-total').textContent=fmt(precio);
-document.getElementById('r-mb').textContent=(Math.round(mb*10)/10)+'%';
-document.getElementById('r-gan').textContent=fmt(ganancia);
-document.getElementById('r-imp-rows').innerHTML=impuestos.map(function(i){return '<div class="cr"><span>+ '+(i.nombre||'Impuesto')+' ('+i.pct+'%)</span><span>'+fmt(precio*(i.pct||0)/100)+'</span></div>';}).join('');
+var envio=parseFloat(document.getElementById('p-envio').value)||0;
+
+// Paso 1: Lo que facturo
+var factura=markup>0?pvp/markup:0;
+// Paso 2: Mi ingreso (saco IVA 21%)
+var ingreso=factura/1.21;
+var iva=factura-ingreso;
+// Paso 3: Interes implicito sobre mi ingreso
+var interes=(tasa/100)*(plazo/365)*ingreso;
+// Paso 4: Venta neta
+var vNeta=ingreso-interes;
+// Paso 5: Impuestos adicionales (cada uno sobre su base)
+var totalImpPesos=impuestos.reduce(function(s,imp){
+var base=imp.base==='factura'?factura:ingreso;
+return s+(base*(parseFloat(imp.pct)||0)/100);
+},0);
+// Paso 6: Comisiones sobre lo que facturo
+var montoComCuotas=factura*comCuotas/100;
+var montoComFija=factura*comFija/100;
+// Paso 7: Margen bruto
+var mb=vNeta-totalImpPesos-montoComCuotas-montoComFija-envio;
+var mbPct=factura>0?(mb/factura)*100:0;
+
+// Actualizar UI
+document.getElementById('r-pvp').textContent=fmt(pvp);
+document.getElementById('r-markup').textContent='÷ '+markup;
+document.getElementById('r-factura').textContent=fmt(factura);
+document.getElementById('r-factura2').textContent=fmt(factura);
+document.getElementById('r-iva').textContent='−'+fmt(iva);
+document.getElementById('r-ingreso').textContent=fmt(ingreso);
+document.getElementById('r-interes').textContent='−'+fmt(interes);
+document.getElementById('r-vneta').textContent=fmt(vNeta);
+document.getElementById('r-comcuotas').textContent='−'+fmt(montoComCuotas);
+document.getElementById('r-comfija').textContent='−'+fmt(montoComFija);
+document.getElementById('r-envio').textContent='−'+fmt(envio);
+document.getElementById('r-mb-pesos').textContent=fmt(mb);
+document.getElementById('r-mb-pesos').style.color=mb>=0?'var(--accent)':'var(--warn)';
+document.getElementById('r-mb-pct').textContent=(Math.round(mbPct*10)/10)+'%';
+document.getElementById('r-mb-pct').style.color=mb>=0?'var(--accent)':'var(--warn)';
+document.getElementById('r-costo-show').textContent=fmt(costo);
+
+// Impuestos adicionales rows
+document.getElementById('r-imp-rows').innerHTML=impuestos.map(function(imp){
+var base=imp.base==='factura'?factura:ingreso;
+var monto=base*(parseFloat(imp.pct)||0)/100;
+return '<div class="cr"><span>− '+(imp.nombre||'Impuesto')+' ('+imp.pct+'% s/'+(imp.base==='factura'?'factura':'ingreso')+')</span><span>−'+fmt(monto)+'</span></div>';
+}).join('');
 }
+
 
 function guardarP(){
 var sku=document.getElementById('p-prod').value;
-var costo=parseFloat(document.getElementById('p-costo').value)||0;
 if(!sku){toast('Seleccioná un producto');return;}
-if(!costo){toast('Ingresá el costo');return;}
+var pvp=parseFloat(document.getElementById('p-pvp').value)||0;
+if(!pvp){toast('Ingresá el PVP');return;}
 var cat=catalogo.find(function(c){return c.sku===sku;});
-var tasa=parseFloat(document.getElementById('p-tasa').value)||0;
+var costo=parseFloat(document.getElementById('p-costo').value)||0;
+var markup=parseFloat(document.getElementById('p-markup').value)||1;
 var plazo=parseFloat(document.getElementById('p-plazo').value)||0;
-var intCalc=tasa*(plazo/365);
-var margen=parseFloat(document.getElementById('p-margen').value)||0;
-var comCanal=parseFloat(document.getElementById('p-comcanal').value)||0;
+var tasa=parseFloat(document.getElementById('p-tasa').value)||0;
+var comFija=parseFloat(document.getElementById('p-comfija').value)||0;
 var comCuotas=parseFloat(document.getElementById('p-comcuotas').value)||0;
-var totalImp=impuestos.reduce(function(s,i){return s+(parseFloat(i.pct)||0);},0);
-var totalPct=intCalc+comCanal+comCuotas+totalImp+margen;
-var precio=totalPct<100?costo/(1-totalPct/100):0;
-var mb=precio>0?((precio-costo)/precio*100):0;
-var entry={sku:sku,nombre:cat?cat.nombre:sku,costo:costo,margen:margen,comCanal:comCanal,comCuotas:comCuotas,intCalc:Math.round(intCalc*100)/100,mp:document.getElementById('p-mp').value,cuotas:document.getElementById('p-cuotas').value,precio:Math.round(precio),mb:Math.round(mb*10)/10,fecha:new Date().toLocaleDateString('es-AR')};
+var envio=parseFloat(document.getElementById('p-envio').value)||0;
+var factura=markup>0?pvp/markup:0;
+var ingreso=factura/1.21;
+var interes=(tasa/100)*(plazo/365)*ingreso;
+var vNeta=ingreso-interes;
+var totalImpPesos=impuestos.reduce(function(s,imp){
+var base=imp.base==='factura'?factura:ingreso;
+return s+(base*(parseFloat(imp.pct)||0)/100);
+},0);
+var montoComCuotas=factura*comCuotas/100;
+var montoComFija=factura*comFija/100;
+var mb=vNeta-totalImpPesos-montoComCuotas-montoComFija-envio;
+var mbPct=factura>0?(mb/factura)*100:0;
+var entry={
+sku:sku,nombre:cat?cat.nombre:sku,costo:costo,pvp:pvp,markup:markup,
+factura:Math.round(factura),ingreso:Math.round(ingreso),
+plazo:plazo,tasa:tasa,comFija:comFija,comCuotas:comCuotas,envio:envio,
+mp:document.getElementById('p-mp').value,
+cuotas:document.getElementById('p-cuotas').value,
+mb:Math.round(mb),mbPct:Math.round(mbPct*10)/10,
+fecha:new Date().toLocaleDateString('es-AR')
+};
 var idx=pricingData.findIndex(function(p){return p.sku===sku;});
 if(idx>=0) pricingData[idx]=entry; else pricingData.push(entry);
 save('nx_pricing',pricingData);renderPTable();toast('Precio guardado ✓');
@@ -881,8 +1009,23 @@ save('nx_pricing',pricingData);renderPTable();toast('Precio guardado ✓');
 function renderPTable(){
 var body=document.getElementById('p-saved');
 if(!pricingData.length){body.innerHTML='<div class="empty" style="padding:1.5rem"><div class="es">Guardá precios para verlos acá</div></div>';return;}
-body.innerHTML='<table><thead><tr><th>Producto</th><th>Costo</th><th>Precio</th><th>Margen</th><th>Canal</th><th>Cuotas</th><th>Fecha</th><th></th></tr></thead><tbody>'+pricingData.map(function(p){return '<tr><td><div class="pn">'+p.nombre+'</div><div class="pk">'+p.sku+'</div></td><td>'+fmt(p.costo)+'</td><td style="color:var(--accent);font-weight:700">'+fmt(p.precio)+'</td><td><span class="badge '+(p.mb>=25?'bg':p.mb>=15?'bp':'bo')+'">'+p.mb+'%</span></td><td style="font-size:.75rem">'+(p.mp||'—')+'</td><td style="font-size:.75rem">'+(p.cuotas?p.cuotas+'c':'—')+'</td><td style="color:var(--muted);font-size:.72rem">'+p.fecha+'</td><td><button class="ib2 del" onclick="deleteP(\''+p.sku+'\')">🗑️</button></td></tr>';}).join('')+'</tbody></table>';
+body.innerHTML='<table><thead><tr><th>Producto</th><th>Costo</th><th>PVP</th><th>Facturo</th><th>MB $</th><th>MB %</th><th>Canal</th><th>Cuotas</th><th>Fecha</th><th></th></tr></thead><tbody>'+pricingData.map(function(p){
+var mbColor=(p.mbPct||0)>=20?'bg':(p.mbPct||0)>=10?'bp':'bo';
+return '<tr>'+
+'<td><div class="pn">'+p.nombre+'</div><div class="pk">'+p.sku+'</div></td>'+
+'<td>'+fmt(p.costo||0)+'</td>'+
+'<td style="font-weight:700">'+fmt(p.pvp||0)+'</td>'+
+'<td>'+fmt(p.factura||0)+'</td>'+
+'<td style="color:var(--accent);font-weight:700">'+fmt(p.mb||0)+'</td>'+
+'<td><span class="badge '+mbColor+'">'+(p.mbPct||0)+'%</span></td>'+
+'<td style="font-size:.75rem">'+(p.mp||'—')+'</td>'+
+'<td style="font-size:.75rem">'+(p.cuotas?p.cuotas+'c':'—')+'</td>'+
+'<td style="color:var(--muted);font-size:.72rem">'+p.fecha+'</td>'+
+'<td><button class="ib2 del" onclick="deleteP(\''+p.sku+'\')">🗑️</button></td>'+
+'</tr>';
+}).join('')+'</tbody></table>';
 }
+
 
 function deleteP(sku){pricingData=pricingData.filter(function(p){return p.sku!==sku;});save('nx_pricing',pricingData);renderPTable();toast('Eliminado');}
 function exportP(){
